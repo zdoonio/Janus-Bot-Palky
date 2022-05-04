@@ -386,8 +386,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     await self.build(UnitTypeId.PYLON, near=p)
                     proxy_built = True
                 
-                if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount <= 0): 
-                    proxy_built = False   
+                #if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount == 0): 
+                    #proxy_built = False   
             except Exception as e:
                 print("Action 13", e)        
                 
