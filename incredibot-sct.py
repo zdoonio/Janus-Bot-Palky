@@ -4,6 +4,9 @@ from sc2.main import run_game  # function that facilitates actually running the 
 from sc2.player import Bot, Computer  #wrapper for whether or not the agent is one of your bots, or a "computer" player
 from sc2 import maps  # maps method for loading maps to play in.
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.upgrade_id import UpgradeId
+from sc2.ids.buff_id import BuffId
+from sc2.ids.ability_id import AbilityId
 import pickle
 import cv2
 import math
@@ -20,6 +23,7 @@ SAVE_REPLAY = True
 total_steps = 10000 
 steps_for_pun = np.linspace(0, 1, total_steps)
 step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
+proxy_built = False
 
 
 
@@ -52,8 +56,21 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         3: send scout (evenly/random/closest to enemy?)
         4: attack (known buildings, units, then enemy base, just go in logical order.)
         5: voidray flee (back to base)
+        6: build zealtos and stalkers
+        7: build defences eg. photon cannon
+        8: do upgrades
+        9: zealots and stalkers flee
+        10: mircro army
+        11: abort attack
+        12: chronoboost nexus or cybernetics
+        13: build proxy pylon
+        14: build more gates
+        15: cannon rush 
+        16: flee probes when attacked
+        17: if enemy being aggresive build oracle 
+        18: attack oracle
         '''
-
+        
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
         if action == 0:
             try:
@@ -106,7 +123,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.GATEWAY, near=nexus)
                         
                     # if the is not a cybernetics core close:
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists and self.structures(UnitTypeId.CYBERNETICSCORE).amount < 0:
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
                         # if we can afford it:
                         if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
                             # build cybernetics core
@@ -126,7 +143,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         #2: build voidray (random stargate)
         elif action == 2:
             try:
-                if self.can_afford(UnitTypeId.VOIDRAY):
+                if self.can_afford(UnitTypeId.VOIDRAY) and self.units(UnitTypeId.VOIDRAY).amount < 12:
                     for sg in self.structures(UnitTypeId.STARGATE).ready.idle:
                         if self.can_afford(UnitTypeId.VOIDRAY):
                             sg.train(UnitTypeId.VOIDRAY)
@@ -158,9 +175,22 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     pass
 
 
-        #4: attack (known buildings, units, then enemy base, just go in logical order.)
+        #4: voidray attack (known buildings, units, then enemy base, just go in logical order.)
         elif action == 4:
             try:
+                # If we have at least 5 void rays, attack closes enemy unit/building, or if none is visible: attack move towards enemy spawn
+                if self.units(UnitTypeId.VOIDRAY).amount > 5:
+                    for voidray in self.units(UnitTypeId.VOIDRAY):
+                    # Activate charge ability if the void ray just attacked
+                        if voidray.weapon_cooldown > 0:
+                            voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
+                        # Choose target and attack, filter out invisible targets
+                        targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                        if targets:
+                            target = targets.closest_to(vr)
+                            voidray.attack(target)
+                        else:
+                            voidray.attack(self.enemy_start_locations[0])
                 # take all void rays and attack!
                 for voidray in self.units(UnitTypeId.VOIDRAY).idle:
                     # if we can attack:
@@ -193,6 +223,204 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             if self.units(UnitTypeId.VOIDRAY).amount > 0:
                 for vr in self.units(UnitTypeId.VOIDRAY):
                     vr.attack(self.start_location)
+                    
+        # 6: Build stalkers and zelatos on gateway 
+        # TODO: wrap gates build when reaserch is ready
+        elif action == 6:
+            try:
+                proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
+                #might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
+                if self.can_afford(UnitTypeId.ZEALOT):
+                    for gate in self.structures(UnitTypeId.GATEWAY).ready.idle:
+                        if self.can_afford(UnitTypeId.ZEALOT):
+                            gate.train(UnitTypeId.ZEALOT)
+                            
+                if self.can_afford(UnitTypeId.STALKER):
+                    for gate in self.structures(UnitTypeId.GATEWAY).ready.idle:
+                        if self.can_afford(UnitTypeId.STALKER):
+                            gate.train(UnitTypeId.STALKER)
+                            
+                if self.proxy_built:
+                    await self.warp_new_units(proxy)            
+                            
+            except Exception as e:
+                print(e)
+                
+        #7: build defences (or up to one) (evenly)
+        elif action == 7:
+            try:
+                # iterate thru all nexus and see if these buildings are close
+                for nexus in self.townhalls:
+                    # is there is not a gateway close:
+                    if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
+                        # if we can afford it:
+                        if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
+                            # build gateway
+                            await self.build(UnitTypeId.GATEWAY, near=nexus)
+                        
+                    # if the is not a forge close:
+                    if not self.structures(UnitTypeId.FORGE).closer_than(20, nexus).exists:
+                        # if we can afford it:
+                        if self.can_afford(UnitTypeId.FORGE) and self.already_pending(UnitTypeId.FORGE) == 0:
+                            # build cybernetics core
+                            await self.build(UnitTypeId.FORGE, near=nexus)
+
+                    # if there is not a forge close:
+                    if not self.structures(UnitTypeId.PHOTONCANNON).closer_than(5, nexus).exists:
+                        # if we can afford it:
+                        if self.can_afford(UnitTypeId.PHOTONCANNON) and self.already_pending(UnitTypeId.PHOTONCANNON) == 0:
+                            # build stargate
+                            await self.build(UnitTypeId.PHOTONCANNON, near=nexus)
+
+            except Exception as e:
+                print(e)
+                
+        # 8: do upgrades, 
+        # now it is simple version just do level one upgrades
+        # TODO: add multiple upgrades and calculate costs
+        elif action == 8:
+            try:
+                for forge in self.structures(UnitTypeId.FORGE).ready.idle:
+                    if self.can_afford(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1)
+                    elif self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL1)
+                    elif self.can_afford(UpgradeId.PROTOSSSHIELDSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSSHIELDSLEVEL1)
+                        
+                if (
+                    self.structures(UnitTypeId.CYBERNETICSCORE).ready and self.can_afford(AbilityId.RESEARCH_WARPGATE)
+                    and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0
+                ):
+                    ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
+                    ccore.research(UpgradeId.WARPGATERESEARCH)
+
+                # Morph to warp gate when research is complete
+                for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
+                    if self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                        gateway(AbilityId.MORPH_WARPGATE)        
+                        
+            except Exception as e:
+                print(e)  
+                
+        # 9: zealots and stalkers flee
+        # TODO: think about more complex algorythm for flee for eg. count chances to being attack 
+        elif action == 9:
+            try:
+                if self.units(UnitTypeId.ZEALOT).amount > 0:
+                    for ground in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
+                        ground.attack(self.start_location)
+                        
+            except Exception as e:
+                print(e)      
+                
+        # 10: micro army
+        # TODO: it will always can be builded
+        # Make stalkers attack either closest enemy unit or enemy spawn location
+        elif action == 10:
+            try:
+                if self.units(UnitTypeId.STALKER).amount > 3:
+                    for stalker in self.units(UnitTypeId.STALKER).ready.idle:
+                        targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                        if targets:
+                            target = targets.closest_to(stalker)
+                            stalker.attack(target)
+                        else:
+                            stalker.attack(self.enemy_start_locations[0])
+                        
+            except Exception as e:
+                print(e)  
+                
+        # 12: chronoboost nexus or cybernetics core
+        elif action == 12:
+            if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
+                if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
+                    if nexus.energy >= 50:
+                        nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
+            else:
+                ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
+                if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
+                    if nexus.energy >= 50:
+                        nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
+                        
+        # 13: build proxy pylon
+        elif action == 13:
+            await self.chat_send("(probe)(pylon) building proxy pylon")
+            p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
+            if (
+            self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not proxy_built
+            and self.can_afford(UnitTypeId.PYLON)
+            ):
+                await self.build(UnitTypeId.PYLON, near=p)
+                proxy_built = True
+                
+            if(self.structures(UnitTypeId.PYLON, near=p).amount <= 0): 
+                proxy_built = False   
+                
+        # 14: build more gates
+        elif action == 14:
+            pylon = self.structures(UnitTypeId.PYLON).ready.random
+            # If we have no cyber core, build one
+            if not self.structures(UnitTypeId.CYBERNETICSCORE):
+                if (
+                    self.can_afford(UnitTypeId.CYBERNETICSCORE)
+                    and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0
+                ):
+                    await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
+            # Build up to 4 gates
+            if (
+                self.can_afford(UnitTypeId.GATEWAY)
+                and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
+            ):
+                await self.build(UnitTypeId.GATEWAY, near=pylon)
+                
+        # 15: cannon rush
+        elif action == 15:
+            await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
+            if not self.townhalls:
+                # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
+                for worker in self.workers:
+                    worker.attack(self.enemy_start_locations[0])
+                return
+            else:
+                nexus = self.townhalls.random
+
+            # Make probes until we have 16 total
+            if self.supply_workers < 16 and nexus.is_idle:
+                if self.can_afford(UnitTypeId.PROBE):
+                    nexus.train(UnitTypeId.PROBE)
+
+            # If we have no pylon, build one near starting nexus
+            elif not self.structures(UnitTypeId.PYLON) and self.already_pending(UnitTypeId.PYLON) == 0:
+                if self.can_afford(UnitTypeId.PYLON):
+                    await self.build(UnitTypeId.PYLON, near=nexus)
+
+            # If we have no forge, build one near the pylon that is closest to our starting nexus
+            elif not self.structures(UnitTypeId.FORGE):
+                pylon_ready = self.structures(UnitTypeId.PYLON).ready
+                if pylon_ready:
+                    if self.can_afford(UnitTypeId.FORGE):
+                        await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
+
+            # If we have less than 2 pylons, build one at the enemy base
+            elif self.structures(UnitTypeId.PYLON).amount < 2:
+                if self.can_afford(UnitTypeId.PYLON):
+                    pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(8, 15))
+                    await self.build(UnitTypeId.PYLON, near=pos)
+
+            # If we have no cannons but at least 2 completed pylons, automatically find a placement location and build them near enemy start location
+            elif not self.structures(UnitTypeId.PHOTONCANNON):
+                if self.structures(UnitTypeId.PYLON).ready.amount >= 2 and self.can_afford(UnitTypeId.PHOTONCANNON):
+                    pylon = self.structures(UnitTypeId.PYLON).closer_than(20, self.enemy_start_locations[0]).random
+                    await self.build(UnitTypeId.PHOTONCANNON, near=pylon)
+
+            # Decide if we should make pylon or cannons, then build them at random location near enemy spawn
+            elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON):
+                # Ensure "fair" decision
+                for _ in range(20):
+                    pos = self.enemy_start_locations[0].random_on_distance(random.randrange(5, 12))
+                    building = UnitTypeId.PHOTONCANNON if self.state.psionic_matrix.covers(pos) else UnitTypeId.PYLON
+                    await self.build(building, near=pos)       
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
