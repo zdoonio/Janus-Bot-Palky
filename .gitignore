@@ -4,3 +4,4 @@ models/*
 .history
 __pycache__
 wandb/*
+logs/*

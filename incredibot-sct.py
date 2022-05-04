@@ -192,27 +192,27 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         else:
                             voidray.attack(self.enemy_start_locations[0])
                 # take all void rays and attack!
-                for voidray in self.units(UnitTypeId.VOIDRAY).idle:
+                #for voidray in self.units(UnitTypeId.VOIDRAY).idle:
                     # if we can attack:
-                    if self.enemy_units.closer_than(10, voidray):
+                    #if self.enemy_units.closer_than(10, voidray):
                         # attack!
-                        voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
+                        #voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
                     # if we can attack:
-                    elif self.enemy_structures.closer_than(10, voidray):
+                    #elif self.enemy_structures.closer_than(10, voidray):
                         # attack!
-                        voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
+                        #voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
                     # any enemy units:
-                    elif self.enemy_units:
+                    #elif self.enemy_units:
                         # attack!
-                        voidray.attack(random.choice(self.enemy_units))
+                        #voidray.attack(random.choice(self.enemy_units))
                     # any enemy structures:
-                    elif self.enemy_structures:
+                    #elif self.enemy_structures:
                         # attack!
-                        voidray.attack(random.choice(self.enemy_structures))
+                        #voidray.attack(random.choice(self.enemy_structures))
                     # if we can attack:
-                    elif self.enemy_start_locations:
+                    #elif self.enemy_start_locations:
                         # attack!
-                        voidray.attack(self.enemy_start_locations[0])
+                        #voidray.attack(self.enemy_start_locations[0])
             
             except Exception as e:
                 print(e)
@@ -220,7 +220,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 
         #5: voidray flee (back to base)
         elif action == 5:
-            if self.units(UnitTypeId.VOIDRAY).amount > 0:
+            if self.units(UnitTypeId.VOIDRAY).idle.amount > 0:
                 for vr in self.units(UnitTypeId.VOIDRAY):
                     vr.attack(self.start_location)
                     
