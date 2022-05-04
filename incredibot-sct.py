@@ -61,7 +61,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         8: do upgrades
         9: zealots and stalkers flee
         10: mircro army
-        11: abort attack
+        11: defend attack
         12: chronoboost nexus or cybernetics
         13: build proxy pylon
         14: build more gates
@@ -307,7 +307,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack 
         elif action == 9:
             try:
-                if self.units(UnitTypeId.ZEALOT).amount > 0:
+                if self.units(UnitTypeId.ZEALOT).idle.amount > 0:
                     for ground in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
                         ground.attack(self.start_location)
                         
@@ -331,6 +331,15 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print(e)  
                 
+        # 11: defend attack
+        elif action == 11:
+            targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
+            for nexus in self.structures(UnitTypeId.NEXUS):
+                targets.closer_than(20, nexus)
+            for unit in self.all_units:
+                target = targets.closest_to(unit)
+                unit.attack(target) 
+                                      
         # 12: chronoboost nexus or cybernetics core
         elif action == 12:
             if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
@@ -585,7 +594,7 @@ result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, IncrediBot()), # runs our coded bot, protoss race, and we pass our bot object 
      Computer(Race.Zerg, Difficulty.Hard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
-    realtime=True, # When set to True, the agent is limited in how long each step can take to process.
+    realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
 
