@@ -23,13 +23,27 @@ SAVE_REPLAY = True
 total_steps = 10000 
 steps_for_pun = np.linspace(0, 1, total_steps)
 step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
-proxy_built = False
 
 
 
 class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
+    
+    async def warp_new_units(self, proxy):
+        for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
+            abilities = await self.get_available_abilities(warpgate)
+            # all the units have the same cooldown anyway so let's just look at ZEALOT
+            if AbilityId.WARPGATETRAIN_STALKER in abilities:
+                pos = proxy.position.to2.random_on_distance(4)
+                placement = await self.find_placement(AbilityId.WARPGATETRAIN_STALKER, pos, placement_step=1)
+                if placement is None:
+                    # return ActionResult.CantFindPlacementLocation
+                    print("can't place")
+                    return
+                warpgate.warp_in(UnitTypeId.STALKER, placement)
+                
     async def on_step(self, iteration: int): # on_step is a method that is called every step of the game.
         no_action = True
+        proxy_built = False
         while no_action:
             try:
                 with open('state_rwd_action.pkl', 'rb') as f:
@@ -240,7 +254,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         if self.can_afford(UnitTypeId.STALKER):
                             gate.train(UnitTypeId.STALKER)
                             
-                if self.proxy_built:
+                if proxy_built:
                     await self.warp_new_units(proxy)            
                             
             except Exception as e:
