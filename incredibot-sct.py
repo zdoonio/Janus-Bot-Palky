@@ -365,7 +365,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 await self.build(UnitTypeId.PYLON, near=p)
                 proxy_built = True
                 
-            if(self.structures(UnitTypeId.PYLON).filter(lambda unit: unit.closest_to(p)).amount <= 0): 
+            if(self.structures(UnitTypeId.PYLON).closer_than(p, 20).amount <= 0): 
                 proxy_built = False   
                 
         # 14: build more gates
