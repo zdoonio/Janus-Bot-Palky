@@ -28,6 +28,9 @@ step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
 
 class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
     
+    def __init__(self):
+        self.proxy_built = False
+    
     async def warp_new_units(self, proxy):
         for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
             abilities = await self.get_available_abilities(warpgate)
@@ -43,7 +46,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 
     async def on_step(self, iteration: int): # on_step is a method that is called every step of the game.
         no_action = True
-        proxy_built = False
+        
         while no_action:
             try:
                 with open('state_rwd_action.pkl', 'rb') as f:
@@ -386,8 +389,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     await self.build(UnitTypeId.PYLON, near=p)
                     proxy_built = True
                 
-                #if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount == 0): 
-                    #proxy_built = False   
+                if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount == 0): 
+                    proxy_built = False   
             except Exception as e:
                 print("Action 13", e)        
                 
