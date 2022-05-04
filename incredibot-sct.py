@@ -336,21 +336,23 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
             for nexus in self.structures(UnitTypeId.NEXUS):
                 targets.closer_than(20, nexus)
-            for unit in self.all_units:
-                target = targets.closest_to(unit)
-                unit.attack(target) 
+            for unit in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
+                if(unit.exists):
+                    target = targets.closest_to(unit)
+                    unit.attack(target) 
                                       
         # 12: chronoboost nexus or cybernetics core
         elif action == 12:
-            if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
-                if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
-                    if nexus.energy >= 50:
-                        nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
-            else:
-                ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
-                if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
-                    if nexus.energy >= 50:
-                        nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
+            for nexus in self.structures(UnitTypeId.NEXUS):
+                if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
+                    if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
+                        if nexus.energy >= 50:
+                            nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
+                else:
+                    ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
+                    if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
+                        if nexus.energy >= 50:
+                            nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
                         
         # 13: build proxy pylon
         elif action == 13:
@@ -363,25 +365,26 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 await self.build(UnitTypeId.PYLON, near=p)
                 proxy_built = True
                 
-            if(self.structures(UnitTypeId.PYLON, near=p).amount <= 0): 
+            if(self.structures(UnitTypeId.PYLON).filter(lambda unit: unit.closest_to(p)).amount <= 0): 
                 proxy_built = False   
                 
         # 14: build more gates
         elif action == 14:
-            pylon = self.structures(UnitTypeId.PYLON).ready.random
-            # If we have no cyber core, build one
-            if not self.structures(UnitTypeId.CYBERNETICSCORE):
+            if self.structures(UnitTypeId.PYLON).exists:
+                pylon = self.structures(UnitTypeId.PYLON).ready.random
+                # If we have no cyber core, build one
+                if not self.structures(UnitTypeId.CYBERNETICSCORE):
+                    if (
+                        self.can_afford(UnitTypeId.CYBERNETICSCORE)
+                        and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0
+                    ):
+                        await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
+                # Build up to 4 gates
                 if (
-                    self.can_afford(UnitTypeId.CYBERNETICSCORE)
-                    and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0
+                    self.can_afford(UnitTypeId.GATEWAY)
+                    and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
                 ):
-                    await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
-            # Build up to 4 gates
-            if (
-                self.can_afford(UnitTypeId.GATEWAY)
-                and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
-            ):
-                await self.build(UnitTypeId.GATEWAY, near=pylon)
+                    await self.build(UnitTypeId.GATEWAY, near=pylon)
                 
         # 15: cannon rush
         elif action == 15:
