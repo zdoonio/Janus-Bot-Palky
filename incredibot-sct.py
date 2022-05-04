@@ -356,7 +356,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         
         # 13: build proxy pylon
         elif action == 13:
-            await self.chat_send("(probe)(pylon) building proxy pylon")
+            #await self.chat_send("(probe)(pylon) building proxy pylon")
             p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
             if (
             self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not proxy_built
@@ -388,7 +388,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 
         # 15: cannon rush
         elif action == 15:
-            await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
+            #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
             if not self.townhalls:
                 # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
                 for worker in self.workers:
