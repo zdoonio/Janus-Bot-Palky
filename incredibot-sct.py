@@ -73,11 +73,11 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         3: send scout (evenly/random/closest to enemy?)
         4: attack (known buildings, units, then enemy base, just go in logical order.)
         5: voidray flee (back to base)
-        6: build zealtos and stalkers
+        6: build zealtos
         7: build defences eg. photon cannon
         8: do upgrades
         9: zealots and stalkers flee
-        10: mircro army
+        10: mircro stalker units
         11: defend attack
         12: chronoboost nexus or cybernetics
         13: build proxy pylon
@@ -320,18 +320,18 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print("Action 8", e) 
                 
-        # 9: zealots and stalkers flee
+        # 9: zealots flee
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack 
         elif action == 9:
             try:
                 if self.units(UnitTypeId.ZEALOT).idle.amount > 0:
-                    for ground in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
+                    for ground in self.units(UnitTypeId.ZEALOT):
                         ground.attack(self.start_location)
                         
             except Exception as e:
                 print("Action 9", e)      
                 
-        # 10: micro army
+        # 10: micro stalker units
         # TODO: it will always can be builded
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 10:
@@ -348,13 +348,14 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print("Action 10", e)
                 
-        # 11: defend attack
+        # 11: defend attack try to use zealots
+        # TODO: this action is not working
         elif action == 11:
             try:
                 targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
                 for nexus in self.structures(UnitTypeId.NEXUS):
                     targets.closer_than(20, nexus)
-                for unit in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
+                for unit in self.units(UnitTypeId.ZEALOT):
                     if(unit.exists):
                         target = targets.closest_to(unit)
                         unit.attack(target)
@@ -378,6 +379,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 12", e)                   
                         
         # 13: build proxy pylon
+        #TODO: improve proxy pylons
         elif action == 13:
             try:
                 #await self.chat_send("(probe)(pylon) building proxy pylon")
@@ -395,6 +397,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 13", e)        
                 
         # 14: build more gates
+        # TODO: creates more cc which is not needed
         elif action == 14:
             try:
                 if self.structures(UnitTypeId.PYLON).exists:
@@ -416,6 +419,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 14", e)           
                 
         # 15: cannon rush
+        # TODO: stop cannon rush when it is other game
         elif action == 15:
             #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
             if not self.townhalls:
