@@ -37,7 +37,7 @@ class Sc2Env(gym.Env):
 							# now we've added the action.
 							pickle.dump(state_rwd_action, f)
 			except Exception as e:
-				#print(str(e))
+				print(str(e))
 				pass
 
 		# waits for the new state to return (map and reward) (no new action yet. )
@@ -48,10 +48,10 @@ class Sc2Env(gym.Env):
 					with open('state_rwd_action.pkl', 'rb') as f:
 						state_rwd_action = pickle.load(f)
 						if state_rwd_action['action'] is None:
-							#print("No state yet")
+							print("No state yet")
 							wait_for_state = True
 						else:
-							#print("Got state state")
+							print("Got state state")
 							state = state_rwd_action['state']
 							reward = state_rwd_action['reward']
 							done = state_rwd_action['done']
@@ -85,5 +85,5 @@ class Sc2Env(gym.Env):
 			pickle.dump(data, f)
 
 		# run incredibot-sct.py non-blocking:
-		subprocess.Popen(['python3', 'incredibot-sct.py'])
+		subprocess.Popen(['python', 'incredibot-sct.py'])
 		return observation  # reward, done, info can't be included

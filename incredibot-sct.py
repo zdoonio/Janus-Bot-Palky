@@ -4,13 +4,15 @@ from sc2.main import run_game  # function that facilitates actually running the 
 from sc2.player import Bot, Computer  #wrapper for whether or not the agent is one of your bots, or a "computer" player
 from sc2 import maps  # maps method for loading maps to play in.
 from sc2.ids.unit_typeid import UnitTypeId
-import random
+import pickle
 import cv2
 import math
 import numpy as np
 import sys
 import pickle
 import time
+import random
+#import actions as BotAction TODO: move actions to action
 
 
 SAVE_REPLAY = True
@@ -42,6 +44,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         await self.distribute_workers() # put idle workers back to work
 
         action = state_rwd_action['action']
+        #await BotAction.take_action(action, iteration) this block might be moved
         '''
         0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
         1: build stargate (or up to one) (evenly)
@@ -103,7 +106,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.GATEWAY, near=nexus)
                         
                     # if the is not a cybernetics core close:
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists and self.structures(UnitTypeId.CYBERNETICSCORE).amount < 0:
                         # if we can afford it:
                         if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
                             # build cybernetics core
@@ -200,7 +203,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             c = [175, 255, 255]
             fraction = mineral.mineral_contents / 1800
             if mineral.is_visible:
-                #print(mineral.mineral_contents)
+                print(mineral.mineral_contents)
                 map[math.ceil(pos.y)][math.ceil(pos.x)] = [int(fraction*i) for i in c]
             else:
                 map[math.ceil(pos.y)][math.ceil(pos.x)] = [20,75,50]  
@@ -327,7 +330,7 @@ result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, IncrediBot()), # runs our coded bot, protoss race, and we pass our bot object 
      Computer(Race.Zerg, Difficulty.Hard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
-    realtime=False, # When set to True, the agent is limited in how long each step can take to process.
+    realtime=True, # When set to True, the agent is limited in how long each step can take to process.
 )
 
 
