@@ -151,7 +151,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.STARGATE, near=nexus)
 
             except Exception as e:
-                print(e)
+                print("Action 1", e)
 
 
         #2: build voidray (random stargate)
@@ -163,7 +163,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             sg.train(UnitTypeId.VOIDRAY)
             
             except Exception as e:
-                print(e)
+                print("Action 2", e)
 
         #3: send scout
         elif action == 3:
@@ -229,7 +229,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         #voidray.attack(self.enemy_start_locations[0])
             
             except Exception as e:
-                print(e)
+                print("Action 4", e)
             
 
         #5: voidray flee (back to base)
@@ -258,7 +258,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     await self.warp_new_units(proxy)            
                             
             except Exception as e:
-                print(e)
+                print("Action 6", e)
                 
         #7: build defences (or up to one) (evenly)
         elif action == 7:
@@ -287,7 +287,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.PHOTONCANNON, near=nexus)
 
             except Exception as e:
-                print(e)
+                print("Action 7", e)
                 
         # 8: do upgrades, 
         # now it is simple version just do level one upgrades
@@ -315,7 +315,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         gateway(AbilityId.MORPH_WARPGATE)        
                         
             except Exception as e:
-                print(e)  
+                print("Action 8", e) 
                 
         # 9: zealots and stalkers flee
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack 
@@ -326,7 +326,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         ground.attack(self.start_location)
                         
             except Exception as e:
-                print(e)      
+                print("Action 9", e)      
                 
         # 10: micro army
         # TODO: it will always can be builded
@@ -343,7 +343,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             stalker.attack(self.enemy_start_locations[0])
                         
             except Exception as e:
-                print(e)  
+                print("Action 10", e)
                 
         # 11: defend attack
         elif action == 11:
@@ -356,7 +356,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         target = targets.closest_to(unit)
                         unit.attack(target)
             except Exception as e:
-                print(e) 
+                print("Action 11", e)
                                       
         # 12: chronoboost nexus or cybernetics core
         elif action == 12:
@@ -372,7 +372,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             if nexus.energy >= 50:
                                 nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
             except Exception as e:
-                print(e)                    
+                print("Action 12", e)                   
                         
         # 13: build proxy pylon
         elif action == 13:
@@ -389,7 +389,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount <= 0): 
                     proxy_built = False   
             except Exception as e:
-                print(e)        
+                print("Action 13", e)        
                 
         # 14: build more gates
         elif action == 14:
@@ -410,7 +410,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     ):
                         await self.build(UnitTypeId.GATEWAY, near=pylon)
             except Exception as e:
-                print(e)             
+                print("Action 14", e)           
                 
         # 15: cannon rush
         elif action == 15:
