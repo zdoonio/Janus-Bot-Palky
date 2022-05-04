@@ -1,0 +1,6 @@
+models/*
+*.pkl
+*.txt
+.history
+__pycache__
+wandb/*
