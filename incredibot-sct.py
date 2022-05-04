@@ -333,58 +333,70 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 
         # 11: defend attack
         elif action == 11:
-            targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
-            for nexus in self.structures(UnitTypeId.NEXUS):
-                targets.closer_than(20, nexus)
-            for unit in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
-                if(unit.exists):
-                    target = targets.closest_to(unit)
-                    unit.attack(target) 
+            try:
+                targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
+                for nexus in self.structures(UnitTypeId.NEXUS):
+                    targets.closer_than(20, nexus)
+                for unit in [self.units(UnitTypeId.ZEALOT), self.units(UnitTypeId.STALKER)]:
+                    if(unit.exists):
+                        target = targets.closest_to(unit)
+                        unit.attack(target)
+            except Exception as e:
+                print(e) 
                                       
         # 12: chronoboost nexus or cybernetics core
         elif action == 12:
-            for nexus in self.structures(UnitTypeId.NEXUS):
-                if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
-                    if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
-                        if nexus.energy >= 50:
-                            nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
-                else:
-                    ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
-                    if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
-                        if nexus.energy >= 50:
-                            nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
+            try:
+                for nexus in self.structures(UnitTypeId.NEXUS):
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
+                        if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
+                            if nexus.energy >= 50:
+                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
+                    else:
+                        ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
+                        if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
+                            if nexus.energy >= 50:
+                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
+            except Exception as e:
+                print(e)                    
                         
         # 13: build proxy pylon
         elif action == 13:
-            #await self.chat_send("(probe)(pylon) building proxy pylon")
-            p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
-            if (
-            self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not proxy_built
-            and self.can_afford(UnitTypeId.PYLON)
-            ):
-                await self.build(UnitTypeId.PYLON, near=p)
-                proxy_built = True
+            try:
+                #await self.chat_send("(probe)(pylon) building proxy pylon")
+                p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
+                if (
+                self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not proxy_built
+                and self.can_afford(UnitTypeId.PYLON)
+                ):
+                    await self.build(UnitTypeId.PYLON, near=p)
+                    proxy_built = True
                 
-            if(self.structures(UnitTypeId.PYLON).closer_than(p, 20).amount <= 0): 
-                proxy_built = False   
+                if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount <= 0): 
+                    proxy_built = False   
+            except Exception as e:
+                print(e)        
                 
         # 14: build more gates
         elif action == 14:
-            if self.structures(UnitTypeId.PYLON).exists:
-                pylon = self.structures(UnitTypeId.PYLON).ready.random
-                # If we have no cyber core, build one
-                if not self.structures(UnitTypeId.CYBERNETICSCORE):
-                    if (
+            try:
+                if self.structures(UnitTypeId.PYLON).exists:
+                    pylon = self.structures(UnitTypeId.PYLON).ready
+                    # If we have no cyber core, build one
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE):
+                        if (
                         self.can_afford(UnitTypeId.CYBERNETICSCORE)
                         and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0
+                        ):
+                            await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
+                    # Build up to 4 gates
+                    if (
+                        self.can_afford(UnitTypeId.GATEWAY)
+                        and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
                     ):
-                        await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
-                # Build up to 4 gates
-                if (
-                    self.can_afford(UnitTypeId.GATEWAY)
-                    and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
-                ):
-                    await self.build(UnitTypeId.GATEWAY, near=pylon)
+                        await self.build(UnitTypeId.GATEWAY, near=pylon)
+            except Exception as e:
+                print(e)             
                 
         # 15: cannon rush
         elif action == 15:
