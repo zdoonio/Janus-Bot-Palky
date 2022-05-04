@@ -536,6 +536,33 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         # reward += 0.005 # original was 0.005, decent results, but let's 3x it. 
                         reward += 0.015  
                         attack_count += 1
+                        
+            # iterate through our photon cannon:
+            for cannon in self.structures(UnitTypeId.PHOTONCANNON):
+                # if voidray is attacking and is in range of enemy unit:
+                if cannon.is_attacking and cannon.target_in_range:
+                    if self.enemy_units.closer_than(8, cannon) or self.enemy_structures.closer_than(8, cannon):
+                        # reward += 0.005 # original was 0.005, decent results, but let's 3x it. 
+                        reward += 0.01  
+                        attack_count += 1
+                        
+            # iterate through our stalkers:
+            for stalker in self.units(UnitTypeId.STALKER):
+                # if voidray is attacking and is in range of enemy unit:
+                if stalker.is_attacking and stalker.target_in_range:
+                    if self.enemy_units.closer_than(8, stalker) or self.enemy_structures.closer_than(8, stalker):
+                        # reward += 0.005 # original was 0.005, decent results, but let's 3x it. 
+                        reward += 0.015  
+                        attack_count += 1
+                        
+            # iterate through our zealots:
+            for zealot in self.units(UnitTypeId.ZEALOT):
+                # if voidray is attacking and is in range of enemy unit:
+                if zealot.is_attacking and zealot.target_in_range:
+                    if self.enemy_units.closer_than(8, zealot) or self.enemy_structures.closer_than(8, zealot):
+                        # reward += 0.005 # original was 0.005, decent results, but let's 3x it. 
+                        reward += 0.01  
+                        attack_count += 1
 
         except Exception as e:
             print("reward",e)
