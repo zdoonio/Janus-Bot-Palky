@@ -208,28 +208,29 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             voidray.attack(target)
                         else:
                             voidray.attack(self.enemy_start_locations[0])
-                # take all void rays and attack!
-                #for voidray in self.units(UnitTypeId.VOIDRAY).idle:
-                    # if we can attack:
-                    #if self.enemy_units.closer_than(10, voidray):
-                        # attack!
-                        #voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
-                    # if we can attack:
-                    #elif self.enemy_structures.closer_than(10, voidray):
-                        # attack!
-                        #voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
-                    # any enemy units:
-                    #elif self.enemy_units:
-                        # attack!
-                        #voidray.attack(random.choice(self.enemy_units))
-                    # any enemy structures:
-                    #elif self.enemy_structures:
-                        # attack!
-                        #voidray.attack(random.choice(self.enemy_structures))
-                    # if we can attack:
-                    #elif self.enemy_start_locations:
-                        # attack!
-                        #voidray.attack(self.enemy_start_locations[0])
+                else:            
+                    # take all void rays and attack!
+                    for voidray in self.units(UnitTypeId.VOIDRAY).idle:
+                        # if we can attack:
+                        if self.enemy_units.closer_than(10, voidray):
+                            # attack!
+                            voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
+                        # if we can attack:
+                        elif self.enemy_structures.closer_than(10, voidray):
+                            # attack!
+                            voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
+                        # any enemy units:
+                        elif self.enemy_units:
+                            # attack!
+                            voidray.attack(random.choice(self.enemy_units))
+                        # any enemy structures:
+                        elif self.enemy_structures:
+                            # attack!
+                            voidray.attack(random.choice(self.enemy_structures))
+                        # if we can attack:
+                        elif self.enemy_start_locations:
+                            # attack!
+                            voidray.attack(self.enemy_start_locations[0])
             
             except Exception as e:
                 print("Action 4", e)
@@ -258,7 +259,10 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             gate.train(UnitTypeId.STALKER)
                             
                 if proxy_built:
-                    await self.warp_new_units(proxy)            
+                    await self.warp_new_units(proxy)
+                else: 
+                    random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
+                    await self.wrap_new_units(random_nexus_pylon)                    
                             
             except Exception as e:
                 print("Action 6", e)
@@ -354,11 +358,11 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             try:
                 targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
                 for nexus in self.structures(UnitTypeId.NEXUS):
-                    targets.closer_than(20, nexus)
-                for unit in self.units(UnitTypeId.ZEALOT):
-                    if(unit.exists):
-                        target = targets.closest_to(unit)
-                        unit.attack(target)
+                    targets.closer_than(10, nexus)
+                for zealot in self.units(UnitTypeId.ZEALOT):
+                    if(zealot.is_idle):
+                        target = targets.closest_to(zealot)
+                        zealot.attack(target)
             except Exception as e:
                 print("Action 11", e)
                                       
@@ -391,7 +395,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     await self.build(UnitTypeId.PYLON, near=p)
                     proxy_built = True
                 
-                if(self.structures(UnitTypeId.PYLON).closer_than(20, p).amount == 0): 
+                if(self.structures(UnitTypeId.PYLON).closer_than(20, p).exists): 
                     proxy_built = False   
             except Exception as e:
                 print("Action 13", e)        
