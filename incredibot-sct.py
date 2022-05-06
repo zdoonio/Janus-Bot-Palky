@@ -28,8 +28,7 @@ step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
 
 class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
     
-    def __init__(self):
-        self.proxy_built = False
+    proxy_built = False
     
     async def warp_new_units(self, proxy):
         for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
@@ -45,6 +44,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 warpgate.warp_in(UnitTypeId.STALKER, placement)
                 
     async def on_step(self, iteration: int): # on_step is a method that is called every step of the game.
+        if iteration == 0:
+            await self.chat_send("(glhf)")
         no_action = True
         
         while no_action:
@@ -247,6 +248,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         elif action == 6:
             try:
                 proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
+                print(self.proxy_built)
                 #might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
                 if self.can_afford(UnitTypeId.ZEALOT):
                     for gate in self.structures(UnitTypeId.GATEWAY).ready.idle:
@@ -258,11 +260,11 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         if self.can_afford(UnitTypeId.STALKER):
                             gate.train(UnitTypeId.STALKER)
                             
-                if proxy_built:
+                if self.proxy_built:
                     await self.warp_new_units(proxy)
                 else: 
                     random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
-                    await self.wrap_new_units(random_nexus_pylon)                    
+                    await self.warp_new_units(random_nexus_pylon)                    
                             
             except Exception as e:
                 print("Action 6", e)
@@ -388,15 +390,17 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             try:
                 #await self.chat_send("(probe)(pylon) building proxy pylon")
                 p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
+                print(self.proxy_built)  
                 if (
-                self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not proxy_built
+                self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built
                 and self.can_afford(UnitTypeId.PYLON)
                 ):
                     await self.build(UnitTypeId.PYLON, near=p)
-                    proxy_built = True
+                    self.proxy_built = True
                 
-                if(self.structures(UnitTypeId.PYLON).closer_than(20, p).exists): 
-                    proxy_built = False   
+                if(not self.structures(UnitTypeId.PYLON).closer_than(20, p).exists): 
+                    self.proxy_built = False   
+                  
             except Exception as e:
                 print("Action 13", e)        
                 
@@ -423,53 +427,57 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 14", e)           
                 
         # 15: cannon rush
-        # TODO: stop cannon rush when it is other game
+        # TODO: stop cannon rush when it there is many losts
         elif action == 15:
-            #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
-            if not self.townhalls:
-                # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
-                for worker in self.workers:
-                    worker.attack(self.enemy_start_locations[0])
-                return
-            else:
-                nexus = self.townhalls.random
+            try:
+                #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
+                if not self.townhalls:
+                    # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
+                    for worker in self.workers:
+                        worker.attack(self.enemy_start_locations[0])
+                    return
+                else:
+                    nexus = self.townhalls.random
 
-            # Make probes until we have 16 total
-            if self.supply_workers < 16 and nexus.is_idle:
-                if self.can_afford(UnitTypeId.PROBE):
-                    nexus.train(UnitTypeId.PROBE)
+                # Make probes until we have 16 total
+                if self.supply_workers < 16 and nexus.is_idle:
+                    if self.can_afford(UnitTypeId.PROBE):
+                        nexus.train(UnitTypeId.PROBE)
 
-            # If we have no pylon, build one near starting nexus
-            elif not self.structures(UnitTypeId.PYLON) and self.already_pending(UnitTypeId.PYLON) == 0:
-                if self.can_afford(UnitTypeId.PYLON):
-                    await self.build(UnitTypeId.PYLON, near=nexus)
+                # If we have no pylon, build one near starting nexus
+                elif not self.structures(UnitTypeId.PYLON) and self.already_pending(UnitTypeId.PYLON) == 0:
+                    if self.can_afford(UnitTypeId.PYLON):
+                        await self.build(UnitTypeId.PYLON, near=nexus)
 
-            # If we have no forge, build one near the pylon that is closest to our starting nexus
-            elif not self.structures(UnitTypeId.FORGE):
-                pylon_ready = self.structures(UnitTypeId.PYLON).ready
-                if pylon_ready:
-                    if self.can_afford(UnitTypeId.FORGE):
-                        await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
+                # If we have no forge, build one near the pylon that is closest to our starting nexus
+                elif not self.structures(UnitTypeId.FORGE):
+                    pylon_ready = self.structures(UnitTypeId.PYLON).ready
+                    if pylon_ready:
+                        if self.can_afford(UnitTypeId.FORGE):
+                            await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
 
-            # If we have less than 2 pylons, build one at the enemy base
-            elif self.structures(UnitTypeId.PYLON).amount < 2:
-                if self.can_afford(UnitTypeId.PYLON):
-                    pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(8, 15))
-                    await self.build(UnitTypeId.PYLON, near=pos)
+                # If we have less than 2 pylons, build one at the enemy base
+                elif self.structures(UnitTypeId.PYLON).amount < 2 and iteration > 350:
+                    if self.can_afford(UnitTypeId.PYLON):
+                        pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(8, 15))
+                        await self.build(UnitTypeId.PYLON, near=pos)
 
-            # If we have no cannons but at least 2 completed pylons, automatically find a placement location and build them near enemy start location
-            elif not self.structures(UnitTypeId.PHOTONCANNON):
-                if self.structures(UnitTypeId.PYLON).ready.amount >= 2 and self.can_afford(UnitTypeId.PHOTONCANNON):
-                    pylon = self.structures(UnitTypeId.PYLON).closer_than(20, self.enemy_start_locations[0]).random
-                    await self.build(UnitTypeId.PHOTONCANNON, near=pylon)
+                # If we have no cannons but at least 2 completed pylons, automatically find a placement location and build them near enemy start location
+                elif not self.structures(UnitTypeId.PHOTONCANNON):
+                    if self.structures(UnitTypeId.PYLON).ready.amount >= 2 and self.can_afford(UnitTypeId.PHOTONCANNON):
+                        pylon = self.structures(UnitTypeId.PYLON).closer_than(20, self.enemy_start_locations[0]).random
+                        await self.build(UnitTypeId.PHOTONCANNON, near=pylon)
 
-            # Decide if we should make pylon or cannons, then build them at random location near enemy spawn
-            elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON):
-                # Ensure "fair" decision
-                for _ in range(20):
-                    pos = self.enemy_start_locations[0].random_on_distance(random.randrange(5, 12))
-                    building = UnitTypeId.PHOTONCANNON if self.state.psionic_matrix.covers(pos) else UnitTypeId.PYLON
-                    await self.build(building, near=pos)       
+                # Decide if we should make pylon or cannons, then build them at random location near enemy spawn
+                elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON):
+                    # Ensure "fair" decision
+                    for _ in range(20):
+                        pos = self.enemy_start_locations[0].random_on_distance(random.randrange(5, 12))
+                        building = UnitTypeId.PHOTONCANNON if self.state.psionic_matrix.covers(pos) else UnitTypeId.PYLON
+                        await self.build(building, near=pos)       
+                    
+            except Exception as e:
+                print("Action 15", e)          
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
@@ -633,7 +641,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, IncrediBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Zerg, Difficulty.Hard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
+     Computer(Race.Random, Difficulty.Medium)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
     realtime=True, # When set to True, the agent is limited in how long each step can take to process.
 )
 
