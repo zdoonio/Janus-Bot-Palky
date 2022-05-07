@@ -440,8 +440,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 else:
                     nexus = self.townhalls.random
 
-                # Make probes until we have 16 total
-                if self.supply_workers < 16 and nexus.is_idle:
+                # Make probes until we have 24 total
+                if self.supply_workers < 24 and nexus.is_idle:
                     if self.can_afford(UnitTypeId.PROBE):
                         nexus.train(UnitTypeId.PROBE)
 
