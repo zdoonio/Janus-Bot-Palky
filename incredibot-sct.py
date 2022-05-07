@@ -494,43 +494,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(random_nexus_pylon) 
             except Exception as e:
-                print("Action 16", e)      
-                
-        #17: find adepts shades    
-        elif action == 17:
-            try:
-                adepts = self.units(UnitTypeId.ADEPT)
-                if adepts and not self.shaded:
-                    # Wait for adepts to spawn and then cast ability
-                    for adept in adepts:
-                        adept(AbilityId.ADEPTPHASESHIFT_ADEPTPHASESHIFT, self._game_info.map_center)
-                    self.shaded = True
-                elif self.shades_mapping:
-                    # Debug log and draw a line between the two units
-                    for adept_tag, shade_tag in self.shades_mapping.items():
-                        adept = self.units.find_by_tag(adept_tag)
-                        shade = self.units.find_by_tag(shade_tag)
-                        if shade:
-                            logger.info(f"Remaining shade time: {shade.buff_duration_remain} / {shade.buff_duration_max}")
-                        if adept and shade:
-                            self.client.debug_line_out(adept, shade, (0, 255, 0))
-                    logger.info(self.shades_mapping)
-                elif self.shaded:
-                    # Find shades
-                    shades = self.units(UnitTypeId.ADEPTPHASESHIFT)
-                    for shade in shades:
-                        remaining_adepts = adepts.tags_not_in(self.shades_mapping)
-                        # Figure out where the shade should have been "self.client.game_step"-frames ago
-                        forward_position = Point2(
-                            (shade.position.x + math.cos(shade.facing), shade.position.y + math.sin(shade.facing))
-                        )
-                        previous_shade_location = shade.position.towards(
-                            forward_position, -(self.client.game_step / 16) * shade.movement_speed
-                        )  # See docstring of movement_speed attribute
-                        closest_adept = remaining_adepts.closest_to(previous_shade_location)
-                        self.shades_mapping[closest_adept.tag] = shade.tag   
-            except Exception as e:
-                print("Action 17", e)                     
+                print("Action 16", e)                      
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
