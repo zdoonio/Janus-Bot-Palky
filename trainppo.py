@@ -19,7 +19,7 @@ conf_dict = {"Model": "v19",
 
 
 run = wandb.init(
-    project=f'JanusBotv1',
+    project=f'JanusBotv2',
     entity="zdoonio",
     config=conf_dict,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
