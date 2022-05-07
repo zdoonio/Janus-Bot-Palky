@@ -31,8 +31,6 @@ step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
 class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
     
     proxy_built = False
-    shaded = False
-    shades_mapping = {}
     
     async def warp_new_units(self, proxy):
         for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
