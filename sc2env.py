@@ -48,10 +48,10 @@ class Sc2Env(gym.Env):
 					with open('state_rwd_action.pkl', 'rb') as f:
 						state_rwd_action = pickle.load(f)
 						if state_rwd_action['action'] is None:
-							print("No state yet")
+							#print("No state yet")
 							wait_for_state = True
 						else:
-							print("Got state state")
+							#print("Got state state")
 							state = state_rwd_action['state']
 							reward = state_rwd_action['reward']
 							done = state_rwd_action['done']

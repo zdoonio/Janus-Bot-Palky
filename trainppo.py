@@ -12,14 +12,14 @@ models_dir = f"models/{model_name}/"
 logdir = f"logs/{model_name}/"
 
 
-conf_dict = {"Model": "v0.1",
+conf_dict = {"Model": "v0.1.1",
              "Machine": "Main",
              "policy":"MlpPolicy",
              "model_save_name": model_name}
 
 
 run = wandb.init(
-    project=f'JanusBotv4',
+    project=f'JanusBot',
     entity="zdoonio",
     config=conf_dict,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
@@ -37,7 +37,7 @@ env = Sc2Env()
 
 model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logdir)
 
-TIMESTEPS = 200
+TIMESTEPS = 100
 iters = 0
 while True:
 	print("On iteration: ", iters)
