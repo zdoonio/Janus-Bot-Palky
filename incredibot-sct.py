@@ -220,6 +220,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 else:            
                     # take all void rays and attack!
                     for voidray in self.units(UnitTypeId.VOIDRAY).idle:
+                        if voidray.weapon_cooldown > 0:
+                            voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
                         # if we can attack:
                         if self.enemy_units.closer_than(10, voidray):
                             # attack!
@@ -525,19 +527,20 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         # 18: micro stalkers        
         elif action == 18:
             try:
-                stalkers = self.units(UnitTypeId.STALKER)
-                enemy_location = self.enemy_start_locations[0]  
+                if self.units(UnitTypeId.STALKER).amount > 3:
+                    stalkers = self.units(UnitTypeId.STALKER)
+                    enemy_location = self.enemy_start_locations[0]  
                 
-                if self.structures(UnitTypeId.PYLON).ready:
-                    pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
+                    if self.structures(UnitTypeId.PYLON).ready:
+                        pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
                     
-                    for stalker in stalkers:
-                        if stalker.weapon_cooldown == 0:
-                            stalker.attack(enemy_location)
-                        elif stalker.weapon_cooldown < 0:
-                            stalker.move(pylon)    
-                        else:
-                            stalker.move(pylon)    
+                        for stalker in stalkers:
+                            if stalker.weapon_cooldown == 0:
+                                stalker.attack(enemy_location)
+                            elif stalker.weapon_cooldown < 0:
+                                stalker.move(pylon)    
+                            else:
+                                stalker.move(pylon)    
             except Exception as e:
                 print("Action 18", e)                             
 
@@ -703,8 +706,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, IncrediBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Random, Difficulty.Medium)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
-    realtime=True, # When set to True, the agent is limited in how long each step can take to process.
+     Computer(Race.Random, Difficulty.HARD)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
+    realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
 
