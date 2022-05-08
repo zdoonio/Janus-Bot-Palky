@@ -19,7 +19,7 @@ conf_dict = {"Model": "v19",
 
 
 run = wandb.init(
-    project=f'JanusBotv2',
+    project=f'JanusBotv3',
     entity="zdoonio",
     config=conf_dict,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
@@ -37,7 +37,7 @@ env = Sc2Env()
 
 model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logdir)
 
-TIMESTEPS = 10000
+TIMESTEPS = 200
 iters = 0
 while True:
 	print("On iteration: ", iters)

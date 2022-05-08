@@ -83,7 +83,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         7: build defences eg. photon cannon
         8: do upgrades
         9: zealots and stalkers flee
-        10: mircro stalker units
+        10: attack stalker units
         11: defend attack
         12: chronoboost nexus or cybernetics
         13: build proxy pylon
@@ -91,9 +91,10 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         15: cannon rush 
         16: warp gate build
         17: find adept shades
-        18: flee probes when attacked
-        19: if enemy being aggresive build oracle 
-        20: attack oracle
+        18: micro stalkers
+        19: flee probes when attacked
+        20: if enemy being aggresive build oracle 
+        21: attack oracle
         '''
         
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
@@ -148,7 +149,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.GATEWAY, near=nexus)
                         
                     # if the is not a cybernetics core close:
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(100, nexus).exists:
                         # if we can afford it:
                         if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
                             # build cybernetics core
@@ -185,7 +186,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 self.last_sent = 0
 
             # if self.last_sent doesnt exist yet:
-            if (iteration - self.last_sent) > 200:
+            if (iteration - self.last_sent) > 1000:
                 try:
                     if self.units(UnitTypeId.PROBE).idle.exists:
                         # pick one of these randomly:
@@ -250,22 +251,15 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 for vr in self.units(UnitTypeId.VOIDRAY):
                     vr.attack(self.start_location)
                     
-        # 6: Build stalkers and zelatos on gateway 
+        # 6: Build zelatos on gateway 
         # TODO: wrap gates build when reaserch is ready
         elif action == 6:
             try:
-                proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
-                print(self.proxy_built)
                 #might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
                 if self.can_afford(UnitTypeId.ZEALOT):
                     for gate in self.structures(UnitTypeId.GATEWAY).ready.idle:
                         if self.can_afford(UnitTypeId.ZEALOT):
-                            gate.train(UnitTypeId.ZEALOT)
-                            
-                if self.can_afford(UnitTypeId.STALKER):
-                    for gate in self.structures(UnitTypeId.GATEWAY).ready.idle:
-                        if self.can_afford(UnitTypeId.STALKER):
-                            gate.train(UnitTypeId.STALKER)                   
+                            gate.train(UnitTypeId.ZEALOT)             
                             
             except Exception as e:
                 print("Action 6", e)
@@ -338,7 +332,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print("Action 9", e)      
                 
-        # 10: micro stalker units
+        # 10: attack stalker units
         # TODO: it will always can be builded
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 10:
@@ -391,7 +385,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             try:
                 #await self.chat_send("(probe)(pylon) building proxy pylon")
                 p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
-                print(self.proxy_built)  
+                  
                 if (
                 self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built
                 and self.can_afford(UnitTypeId.PYLON)
@@ -460,30 +454,31 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 # If we have less than 2 pylons, build one at the enemy base
                 elif self.structures(UnitTypeId.PYLON).amount < 2:
                     if self.can_afford(UnitTypeId.PYLON):
-                        pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(8, 15))
+                        pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(25, 35))
                         await self.build(UnitTypeId.PYLON, near=pos)
 
                 # If we have no cannons but at least 2 completed pylons, automatically find a placement location and build them near enemy start location
-                elif not self.structures(UnitTypeId.PHOTONCANNON):
+                elif not self.structures(UnitTypeId.PHOTONCANNON).closer_than(35, self.enemy_start_locations[0]):
                     if self.structures(UnitTypeId.PYLON).ready.amount >= 2 and self.can_afford(UnitTypeId.PHOTONCANNON):
-                        pylon = self.structures(UnitTypeId.PYLON).closer_than(20, self.enemy_start_locations[0]).random
+                        pylon = self.structures(UnitTypeId.PYLON).closer_than(35, self.enemy_start_locations[0]).random
                         await self.build(UnitTypeId.PHOTONCANNON, near=pylon)
 
                 # Decide if we should make pylon or cannons, then build them at random location near enemy spawn
                 elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON):
                     # Ensure "fair" decision
                     for _ in range(20):
-                        pos = self.enemy_start_locations[0].random_on_distance(random.randrange(5, 12))
+                        pos = self.enemy_start_locations[0].random_on_distance(random.randrange(10, 25))
                         building = UnitTypeId.PHOTONCANNON if self.state.psionic_matrix.covers(pos) else UnitTypeId.PYLON
                         await self.build(building, near=pos)       
                     
             except Exception as e:
                 print("Action 15", e)    
                 
-        #16: warp gate build        
+        #16: warp gate train satlkers        
         elif action == 16:     
             try:
                 if self.proxy_built:
+                    proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
                     await self.warp_new_units(proxy)
                 else: 
                     random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
@@ -525,7 +520,26 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         closest_adept = remaining_adepts.closest_to(previous_shade_location)
                         self.shades_mapping[closest_adept.tag] = shade.tag   
             except Exception as e:
-                print("Action 17", e)                     
+                print("Action 17", e)  
+                
+        # 18: micro stalkers        
+        elif action == 18:
+            try:
+                stalkers = self.units(UnitTypeId.STALKER)
+                enemy_location = self.enemy_start_locations[0]  
+                
+                if self.structures(UnitTypeId.PYLON).ready:
+                    pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
+                    
+                    for stalker in stalkers:
+                        if stalker.weapon_cooldown == 0:
+                            stalker.attack(enemy_location)
+                        elif stalker.weapon_cooldown < 0:
+                            stalker.move(pylon)    
+                        else:
+                            stalker.move(pylon)    
+            except Exception as e:
+                print("Action 18", e)                             
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
