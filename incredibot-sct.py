@@ -706,7 +706,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, IncrediBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Random, Difficulty.Hard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
+     Computer(Race.Random, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
