@@ -1,3 +1,4 @@
+from typing import List
 from sc2.bot_ai import BotAI  # parent class we inherit from
 from sc2.data import Difficulty, Race  # difficulty for bots, race for the 1 of 3 races
 from sc2.main import run_game  # function that facilitates actually running the agents in games
@@ -7,6 +8,7 @@ from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.upgrade_id import UpgradeId
 from sc2.ids.buff_id import BuffId
 from sc2.ids.ability_id import AbilityId
+from sc2.unit import Unit
 import pickle
 import cv2
 import math
@@ -18,6 +20,7 @@ import random
 from loguru import logger
 from sc2.position import Point2
 #import actions as BotAction TODO: move actions to action
+# TODO: refactor code on version 0.3
 
 
 SAVE_REPLAY = True
@@ -27,14 +30,13 @@ steps_for_pun = np.linspace(0, 1, total_steps)
 step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
 
 
-
-class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
+class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
     
     proxy_built = False
     shaded = False
     shades_mapping = {}
-    
-    async def warp_new_units(self, proxy):
+
+    async def warp_new_units(self, proxy: Unit) -> None:
         for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
             abilities = await self.get_available_abilities(warpgate)
             # all the units have the same cooldown anyway so let's just look at ZEALOT
@@ -46,11 +48,32 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     print("can't place")
                     return
                 warpgate.warp_in(UnitTypeId.STALKER, placement)
+                
+    def do_random_attack(self, unit: Unit):
+        invisible_enemy_start_locations = [p for p in self.enemy_start_locations if not self.is_visible(p)]
+        print(unit)
+        print(invisible_enemy_start_locations)
+        if self.enemy_structures:
+            unit.attack(self.enemy_structures.random.position)
+        elif any(invisible_enemy_start_locations):
+            unit.attack(random.choice(invisible_enemy_start_locations))
+        else:
+            area = self.game_info.playable_area
+            target = np.random.uniform((area.x, area.y), (area.right, area.top))
+            target = Point2(target)
+            if self.in_pathing_grid(target) and not self.is_visible(target):
+                unit.attack(target)        
                          
                 
     async def on_step(self, iteration: int): # on_step is a method that is called every step of the game.
         if iteration == 0:
             await self.chat_send("(glhf)")
+        
+        if not any(self.townhalls):
+            # surrender
+            await self.client.chat_send('(gg)', False)
+            await self.client.quit()
+            
         no_action = True
         
         while no_action:
@@ -186,22 +209,17 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 self.last_sent = 0
 
             # if self.last_sent doesnt exist yet:
-            if (iteration - self.last_sent) > 1000:
+            if (iteration - self.last_sent) > 400:
                 try:
                     if self.units(UnitTypeId.PROBE).idle.exists:
                         # pick one of these randomly:
                         probe = random.choice(self.units(UnitTypeId.PROBE).idle)
+                        self.do_random_attack(probe)
                     else:
                         probe = random.choice(self.units(UnitTypeId.PROBE))
+                        self.do_random_attack(probe)
                     # send probe towards enemy base:
-                    if self.enemy_structures:
-                        probe.attack(self.enemy_start_locations[0])
-                    else:
-                        arena = self.game_info.playable_area
-                        target = np.random.uniform((arena.x, arena.y), (arena.right, arena.top))
-                        target = Point2(target)
-                        if self.in_pathing_grid(target) and not self.is_visible(target):
-                                probe.attack(target)
+                    
                     self.last_sent = iteration
 
                 except Exception as e:
@@ -218,37 +236,18 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         if voidray.weapon_cooldown > 0:
                             voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
                         # Choose target and attack, filter out invisible targets
-                        targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                        targets = (self.enemy_units | self.enemy_structures)
                         if targets:
-                            target = targets.closest_to(vr)
+                            target = targets.closest_to(voidray)
                             voidray.attack(target)
                         else:
-                            voidray.attack(self.enemy_start_locations[0])
+                            self.do_random_attack(voidray)
                 else:            
                     # take all void rays and attack!
                     for voidray in self.units(UnitTypeId.VOIDRAY).idle:
                         if voidray.weapon_cooldown > 0:
                             voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
-                        # if we can attack:
-                        if self.enemy_units.closer_than(10, voidray):
-                            # attack!
-                            voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
-                        # if we can attack:
-                        elif self.enemy_structures.closer_than(10, voidray):
-                            # attack!
-                            voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
-                        # any enemy units:
-                        elif self.enemy_units:
-                            # attack!
-                            voidray.attack(random.choice(self.enemy_units))
-                        # any enemy structures:
-                        elif self.enemy_structures:
-                            # attack!
-                            voidray.attack(random.choice(self.enemy_structures))
-                        # if we can attack:
-                        elif self.enemy_start_locations:
-                            # attack!
-                            voidray.attack(self.enemy_start_locations[0])
+                        self.do_random_attack(voidray)
             
             except Exception as e:
                 print("Action 4", e)
@@ -257,11 +256,10 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         #5: voidray flee (back to base)
         elif action == 5:
             if self.units(UnitTypeId.VOIDRAY).idle.amount > 0:
-                for vr in self.units(UnitTypeId.VOIDRAY):
-                    vr.attack(self.start_location)
+                for voidray in self.units(UnitTypeId.VOIDRAY):
+                    voidray.attack(self.start_location)
                     
-        # 6: Build zelatos on gateway 
-        # TODO: wrap gates build when reaserch is ready
+        # 6: Build zelatos on gateway
         elif action == 6:
             try:
                 #might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
@@ -352,13 +350,12 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             target = targets.closest_to(stalker)
                             stalker.attack(target)
                         else:
-                            stalker.attack(self.enemy_start_locations[0])
+                            self.do_random_attack(stalker)
                         
             except Exception as e:
                 print("Action 10", e)
                 
         # 11: defend attack try to use zealots
-        # TODO: this action is not working
         elif action == 11:
             try:
                 targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
@@ -388,27 +385,22 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 12", e)                   
                         
         # 13: build proxy pylon
-        #TODO: improve proxy pylons
         elif action == 13:
             try:
                 #await self.chat_send("(probe)(pylon) building proxy pylon")
-                p = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
+                point = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
                   
-                if (
-                self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built
-                and self.can_afford(UnitTypeId.PYLON)
-                ):
-                    await self.build(UnitTypeId.PYLON, near=p)
+                if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)):
+                    await self.build(UnitTypeId.PYLON, near=point)
                     self.proxy_built = True
                 
-                if(not self.structures(UnitTypeId.PYLON).closer_than(20, p).exists): 
+                if(not self.structures(UnitTypeId.PYLON).closer_than(20, point).exists): 
                     self.proxy_built = False   
                   
             except Exception as e:
                 print("Action 13", e)        
                 
         # 14: build more gates
-        # TODO: creates more cc which is not needed
         elif action == 14:
             try:
                 if self.structures(UnitTypeId.PYLON).exists:
@@ -430,7 +422,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 14", e)           
                 
         # 15: cannon rush
-        # TODO: stop cannon rush when it there is many losts
+        # TODO: maybe do like an tactics
         elif action == 15:
             try:
                 #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
@@ -441,6 +433,8 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     return
                 else:
                     nexus = self.townhalls.random
+                    
+                location = self.enemy_structures.closer_than(30, self.enemy_start_locations[0]).exists   
 
                 # Make probes until we have 24 total
                 if self.supply_workers < 24 and nexus.is_idle:
@@ -460,7 +454,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
 
                 # If we have less than 2 pylons, build one at the enemy base
-                elif self.structures(UnitTypeId.PYLON).amount < 2:
+                elif self.structures(UnitTypeId.PYLON).amount < 1:
                     if self.can_afford(UnitTypeId.PYLON):
                         pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(25, 35))
                         await self.build(UnitTypeId.PYLON, near=pos)
@@ -472,7 +466,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         await self.build(UnitTypeId.PHOTONCANNON, near=pylon)
 
                 # Decide if we should make pylon or cannons, then build them at random location near enemy spawn
-                elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON):
+                elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON) and location:
                     # Ensure "fair" decision
                     for _ in range(20):
                         pos = self.enemy_start_locations[0].random_on_distance(random.randrange(10, 25))
@@ -482,20 +476,40 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print("Action 15", e)    
                 
-        #16: warp gate train satlkers        
+        #16: warp gate train stalkers        
         elif action == 16:     
             try:
-                if self.proxy_built:
+                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
                     await self.warp_new_units(proxy)
-                else: 
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1: 
                     random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(random_nexus_pylon) 
             except Exception as e:
                 print("Action 16", e)      
                 
-        #17: find adepts shades    
+        # 17: micro stalkers        
         elif action == 17:
+            try:
+                if self.units(UnitTypeId.STALKER).amount > 3:
+                    stalkers = self.units(UnitTypeId.STALKER)
+                    enemy_location = self.enemy_start_locations[0]  
+                
+                    if self.structures(UnitTypeId.PYLON).ready:
+                        pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
+                    
+                        for stalker in stalkers:
+                            if stalker.weapon_cooldown == 0:
+                                stalker.attack(enemy_location)
+                            elif stalker.weapon_cooldown < 0:
+                                stalker.move(pylon)    
+                            else:
+                                stalker.move(pylon)    
+            except Exception as e:
+                print("Action 17", e)         
+                
+        #18: find adepts shades    
+        elif action == 18:
             try:
                 adepts = self.units(UnitTypeId.ADEPT)
                 if adepts and not self.shaded:
@@ -528,27 +542,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         closest_adept = remaining_adepts.closest_to(previous_shade_location)
                         self.shades_mapping[closest_adept.tag] = shade.tag   
             except Exception as e:
-                print("Action 17", e)  
-                
-        # 18: micro stalkers        
-        elif action == 18:
-            try:
-                if self.units(UnitTypeId.STALKER).amount > 3:
-                    stalkers = self.units(UnitTypeId.STALKER)
-                    enemy_location = self.enemy_start_locations[0]  
-                
-                    if self.structures(UnitTypeId.PYLON).ready:
-                        pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
-                    
-                        for stalker in stalkers:
-                            if stalker.weapon_cooldown == 0:
-                                stalker.attack(enemy_location)
-                            elif stalker.weapon_cooldown < 0:
-                                stalker.move(pylon)    
-                            else:
-                                stalker.move(pylon)    
-            except Exception as e:
-                print("Action 18", e)                             
+                print("Action 18", e)                              
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
@@ -711,7 +705,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 
 result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
-    [Bot(Race.Protoss, IncrediBot()), # runs our coded bot, protoss race, and we pass our bot object 
+    [Bot(Race.Protoss, JanusBot()), # runs our coded bot, protoss race, and we pass our bot object 
      Computer(Race.Random, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
