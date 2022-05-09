@@ -51,8 +51,6 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 
     def do_random_attack(self, unit: Unit):
         invisible_enemy_start_locations = [p for p in self.enemy_start_locations if not self.is_visible(p)]
-        print(unit)
-        print(invisible_enemy_start_locations)
         if self.enemy_structures:
             unit.attack(self.enemy_structures.random.position)
         elif any(invisible_enemy_start_locations):
@@ -453,7 +451,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
 
                 # If we have less than 2 pylons, build one at the enemy base
-                elif self.structures(UnitTypeId.PYLON).amount < 1:
+                elif self.structures(UnitTypeId.PYLON).amount < 2:
                     if self.can_afford(UnitTypeId.PYLON):
                         pos = self.enemy_start_locations[0].towards(self.game_info.map_center, random.randrange(25, 35))
                         await self.build(UnitTypeId.PYLON, near=pos)
@@ -705,7 +703,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, JanusBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Random, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
+     Computer(Race.Random, Difficulty.Medium)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 

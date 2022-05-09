@@ -23,10 +23,10 @@ models_dir = f"models/{model_name}/"
 logdir = f"logs/{model_name}/"
 
 
-conf_dict = {"Model": "load-v16s",
-             "Machine": "Puget/Desktop/v18/2",
+conf_dict = {"Model": "v0.2.1",
+             "Machine": "Main",
              "policy":"MlpPolicy",
-             "model_save_name": model_name,
+             "model_save_name": model_name, 
              "load_model": LOAD_MODEL
              }
 
