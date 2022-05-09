@@ -10,14 +10,14 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 
 
-LOAD_MODEL = "models/1647915989/1647915989.zip"
+LOAD_MODEL = "models/janusmind/v0_2_1.zip"
 # Environment:
 env = Sc2Env()
 
 # load the model:
 model = PPO.load(LOAD_MODEL, env=env)
 
-model_name = f"{int(time.time())}"
+model_name = f"janusmind"
 
 models_dir = f"models/{model_name}/"
 logdir = f"logs/{model_name}/"
@@ -40,10 +40,10 @@ run = wandb.init(
 
 
 # further train:
-TIMESTEPS = 10000
+TIMESTEPS = 100
 iters = 0
 while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/{TIMESTEPS*iters}")
+	model.save(f"{models_dir}/v0_2_1.zip")

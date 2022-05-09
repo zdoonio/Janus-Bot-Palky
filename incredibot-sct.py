@@ -19,6 +19,7 @@ import time
 import random
 from loguru import logger
 from sc2.position import Point2
+from torch import true_divide
 #import actions as BotAction TODO: move actions to action
 # TODO: refactor code on version 0.3
 
@@ -404,16 +405,10 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     pylon = self.structures(UnitTypeId.PYLON).ready
                     # If we have no cyber core, build one
                     if not self.structures(UnitTypeId.CYBERNETICSCORE):
-                        if (
-                        self.can_afford(UnitTypeId.CYBERNETICSCORE)
-                        and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0
-                        ):
+                        if (self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0):
                             await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
                     # Build up to 4 gates
-                    if (
-                        self.can_afford(UnitTypeId.GATEWAY)
-                        and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4
-                    ):
+                    if (self.can_afford(UnitTypeId.GATEWAY) and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4):
                         await self.build(UnitTypeId.GATEWAY, near=pylon)
             except Exception as e:
                 print("Action 14", e)           
@@ -703,7 +698,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 result = run_game(  # run_game is a function that runs the game.
     maps.get("2000AtmospheresAIE"), # the map we are playing on
     [Bot(Race.Protoss, JanusBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Random, Difficulty.Medium)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
+     Computer(Race.Random, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
