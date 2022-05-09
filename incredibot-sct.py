@@ -229,8 +229,13 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         #4: voidray attack (known buildings, units, then enemy base, just go in logical order.)
         elif action == 4:
             try:
+                targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked) 
+                if targets.closer_than(20, self.start_location):
+                    for voidray in self.units(UnitTypeId.VOIDRAY):
+                        target = targets.closest_to(voidray)
+                        voidray.attack(target)
                 # If we have at least 5 void rays, attack closes enemy unit/building, or if none is visible: attack move towards enemy spawn
-                if self.units(UnitTypeId.VOIDRAY).amount > 5:
+                elif self.units(UnitTypeId.VOIDRAY).amount > 5:
                     for voidray in self.units(UnitTypeId.VOIDRAY):
                     # Activate charge ability if the void ray just attacked
                         if voidray.weapon_cooldown > 0:
@@ -242,12 +247,6 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             voidray.attack(target)
                         else:
                             self.do_random_attack(voidray)
-                else:            
-                    # take all void rays and attack!
-                    for voidray in self.units(UnitTypeId.VOIDRAY).idle:
-                        if voidray.weapon_cooldown > 0:
-                            voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
-                        self.do_random_attack(voidray)
             
             except Exception as e:
                 print("Action 4", e)
