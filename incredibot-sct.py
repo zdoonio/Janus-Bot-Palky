@@ -194,7 +194,14 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                     else:
                         probe = random.choice(self.units(UnitTypeId.PROBE))
                     # send probe towards enemy base:
-                    probe.attack(self.enemy_start_locations[0])
+                    if self.enemy_structures:
+                        probe.attack(self.enemy_start_locations[0])
+                    else:
+                        arena = self.game_info.playable_area
+                        target = np.random.uniform((arena.x, arena.y), (arena.right, arena.top))
+                        target = Point2(target)
+                        if self.in_pathing_grid(target) and not self.is_visible(target):
+                                probe.attack(target)
                     self.last_sent = iteration
 
                 except Exception as e:
@@ -335,7 +342,6 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 9", e)      
                 
         # 10: attack stalker units
-        # TODO: it will always can be builded
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 10:
             try:
