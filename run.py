@@ -10,7 +10,7 @@ bot = Bot(Race.Protoss, JanusBot(), 'JanusBot')
 
 # Start game
 if __name__ == '__main__':
-    subprocess.Popen(['python3', 'test_model.py'])
+    subprocess.Popen(['python', 'test_model.py'])
     if "--LadderServer" in sys.argv:
         # Ladder game started by LadderManager
         print("Starting ladder game...")
