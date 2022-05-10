@@ -343,7 +343,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 11: send scout (evenly/random/closest to enemy?)
         elif action == 11:
             try:
-                self.scout(curent_iteration)(curent_iteration=iteration)
+                self.scout(curent_iteration=iteration)
             except Exception as e:
                 print("Action 11", e)
 
