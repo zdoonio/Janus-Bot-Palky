@@ -189,7 +189,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         if not any(self.townhalls):
             # surrender
             await self.client.chat_send('(gg)', False)
-            await self.client.quit()
+            #await self.client.quit()
 
         no_action = True
 

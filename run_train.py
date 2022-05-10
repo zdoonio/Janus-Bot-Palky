@@ -20,11 +20,11 @@ result = run_game(  # run_game is a function that runs the game.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
-
-if str(result) == "Result.Victory":
-    rwd = 500
-else:
-    rwd = -500
+if result != None:
+    if str(result) == "Result.Victory":
+        rwd = 500
+    else:
+        rwd = -500
 
 with open("data/results.txt","a") as f:
     f.write(f"{result}\n")
