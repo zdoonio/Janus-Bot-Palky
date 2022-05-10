@@ -2,7 +2,7 @@ from stable_baselines3 import PPO
 from sc2env import Sc2Env
 
 
-LOAD_MODEL = "models/janusmind/v0_2_1.zip"
+LOAD_MODEL = "models/janusmind/v0_2_2.zip"
 # Environment:
 env = Sc2Env()
 
@@ -11,7 +11,7 @@ model = PPO.load(LOAD_MODEL)
 
 
 # Play the game:
-obs = env.reset()
+obs = env.reset(is_train = False)
 done = False
 while not done:
     action, _states = model.predict(obs)

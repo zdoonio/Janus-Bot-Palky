@@ -10,7 +10,7 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 
 
-LOAD_MODEL = "models/janusmind/v0_2_1.zip"
+LOAD_MODEL = "models/janusmind/v0_2_2.zip"
 # Environment:
 env = Sc2Env()
 
@@ -23,7 +23,7 @@ models_dir = f"models/{model_name}/"
 logdir = f"logs/{model_name}/"
 
 
-conf_dict = {"Model": "v0.2.1",
+conf_dict = {"Model": "v0.2.2",
              "Machine": "Main",
              "policy":"MlpPolicy",
              "model_save_name": model_name, 
@@ -31,7 +31,7 @@ conf_dict = {"Model": "v0.2.1",
              }
 
 run = wandb.init(
-    project=f'JanusBotv1',
+    project=f'JanusBotv0.2',
     entity="zdoonio",
     config=conf_dict,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
@@ -46,4 +46,4 @@ while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/v0_2_1.zip")
+	model.save(f"{models_dir}/v0_2_2.zip")

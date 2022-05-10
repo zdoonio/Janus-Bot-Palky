@@ -1,41 +1,27 @@
 from typing import List
 from sc2.bot_ai import BotAI  # parent class we inherit from
-from sc2.data import Difficulty, Race  # difficulty for bots, race for the 1 of 3 races
-from sc2.main import run_game  # function that facilitates actually running the agents in games
-from sc2.player import Bot, Computer  #wrapper for whether or not the agent is one of your bots, or a "computer" player
-from sc2 import maps  # maps method for loading maps to play in.
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.upgrade_id import UpgradeId
 from sc2.ids.buff_id import BuffId
 from sc2.ids.ability_id import AbilityId
 from sc2.unit import Unit
+from sc2.position import Point2
 import pickle
 import cv2
 import math
 import numpy as np
-import sys
-import pickle
 import time
-import random
-from loguru import logger
-from sc2.position import Point2
-from torch import true_divide
-#import actions as BotAction TODO: move actions to action
-# TODO: refactor code on version 0.3
-
-
-SAVE_REPLAY = True
-
-total_steps = 10000 
-steps_for_pun = np.linspace(0, 1, total_steps)
-step_punishment = ((np.exp(steps_for_pun**3)/10) - 0.1)*10
-
 
 class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
     
+    SAVE_REPLAY = True
     proxy_built = False
     shaded = False
     shades_mapping = {}
+    
+    total_steps = 10000 
+    steps_for_pun = np.linspace(0, 1, total_steps)
+    step_punishment = ((np.exp(steps_for_pun**3) / 10) - 0.1) * 10
 
     async def warp_new_units(self, proxy: Unit) -> None:
         for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
@@ -414,7 +400,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                 print("Action 14", e)           
                 
         # 15: cannon rush
-        # TODO: maybe do like an tactics
+        # TODO: maybe do more complex tactics for cannon rush
         elif action == 15:
             try:
                 #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
@@ -636,8 +622,6 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             # save map image into "replays dir"
             cv2.imwrite(f"replays/{int(time.time())}-{iteration}.png", map)
 
-
-
         reward = 0
 
         try:
@@ -685,40 +669,11 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         
         if iteration % 100 == 0:
             print(f"Iter: {iteration}. RWD: {reward}. VR: {self.units(UnitTypeId.VOIDRAY).amount}")
+            
+        save_map = np.resize(map, (224, 224, 3))    
 
         # write the file: 
-        data = {"state": map, "reward": reward, "action": None, "done": False}  # empty action waiting for the next one!
+        data = {"state": save_map, "reward": reward, "action": None, "done": False}  # empty action waiting for the next one!
 
-        with open('state_rwd_action.pkl', 'wb') as f:
+        with open('data/state_rwd_action.pkl', 'wb') as f:
             pickle.dump(data, f)
-
-        
-
-
-result = run_game(  # run_game is a function that runs the game.
-    maps.get("2000AtmospheresAIE"), # the map we are playing on
-    [Bot(Race.Protoss, JanusBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Random, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
-    realtime=False, # When set to True, the agent is limited in how long each step can take to process.
-)
-
-
-if str(result) == "Result.Victory":
-    rwd = 500
-else:
-    rwd = -500
-
-with open("results.txt","a") as f:
-    f.write(f"{result}\n")
-
-
-map = np.zeros((224, 224, 3), dtype=np.uint8)
-observation = map
-data = {"state": map, "reward": rwd, "action": None, "done": True}  # empty action waiting for the next one!
-with open('state_rwd_action.pkl', 'wb') as f:
-    pickle.dump(data, f)
-
-cv2.destroyAllWindows()
-cv2.waitKey(1)
-time.sleep(3)
-sys.exit()

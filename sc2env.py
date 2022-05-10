@@ -23,7 +23,7 @@ class Sc2Env(gym.Env):
 		while wait_for_action:
 			#print("waiting for action")
 			try:
-				with open('state_rwd_action.pkl', 'rb') as f:
+				with open('data/state_rwd_action.pkl', 'rb') as f:
 					state_rwd_action = pickle.load(f)
 
 					if state_rwd_action['action'] is not None:
@@ -33,7 +33,7 @@ class Sc2Env(gym.Env):
 						#print("Needs action")
 						wait_for_action = False
 						state_rwd_action['action'] = action
-						with open('state_rwd_action.pkl', 'wb') as f:
+						with open('data/state_rwd_action.pkl', 'wb') as f:
 							# now we've added the action.
 							pickle.dump(state_rwd_action, f)
 			except Exception as e:
@@ -45,7 +45,7 @@ class Sc2Env(gym.Env):
 		while wait_for_state:
 			try:
 				if os.path.getsize('state_rwd_action.pkl') > 0:
-					with open('state_rwd_action.pkl', 'rb') as f:
+					with open('data/state_rwd_action.pkl', 'rb') as f:
 						state_rwd_action = pickle.load(f)
 						if state_rwd_action['action'] is None:
 							#print("No state yet")
@@ -62,7 +62,7 @@ class Sc2Env(gym.Env):
 				map = np.zeros((224, 224, 3), dtype=np.uint8)
 				observation = map
 				data = {"state": map, "reward": 0, "action": 3, "done": False}  # empty action waiting for the next one!
-				with open('state_rwd_action.pkl', 'wb') as f:
+				with open('data/state_rwd_action.pkl', 'wb') as f:
 					pickle.dump(data, f)
 
 				state = map
@@ -75,14 +75,16 @@ class Sc2Env(gym.Env):
 		return observation, reward, done, info
 
 
-	def reset(self):
-		print("RESETTING ENVIRONMENT!!!!!!!!!!!!!")
+	def reset(self, is_train):
 		map = np.zeros((224, 224, 3), dtype=np.uint8)
 		observation = map
 		data = {"state": map, "reward": 0, "action": None, "done": False}  # empty action waiting for the next one!
-		with open('state_rwd_action.pkl', 'wb') as f:
+		with open('data/state_rwd_action.pkl', 'wb') as f:
 			pickle.dump(data, f)
 
-		# run incredibot-sct.py non-blocking:
-		subprocess.Popen(['python', 'incredibot-sct.py'])
+		if is_train:
+			print("RESETTING ENVIRONMENT!!!!!!!!!!!!!")
+      		# run incredibot-sct.py non-blocking:
+			subprocess.Popen(['python', 'run_train.py'])
+   
 		return observation  # reward, done, info can't be included
