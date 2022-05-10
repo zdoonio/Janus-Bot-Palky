@@ -127,15 +127,15 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
             # if the is not a cybernetics core close:
             if build_cybernetics:
-                self.build_building_close_to_nexus(
+                await self.build_building_close_to_nexus(
                     nexus, UnitTypeId.CYBERNETICSCORE, 100)
 
             # build advanced building one:
-            self.build_building_close_to_nexus(
+            await self.build_building_close_to_nexus(
                 nexus, building_one, close_to_one)
 
             # build advanced building two:
-            self.build_building_close_to_nexus(
+            await self.build_building_close_to_nexus(
                 nexus, building_two, close_to_two)
 
     async def build_building_close_to_nexus(self, nexus: Unit, unit_type: UnitTypeId, close_to: int):
