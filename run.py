@@ -1,18 +1,16 @@
-
+import subprocess
 import sc2, sys
 from ladder import run_ladder_game
 from sc2.data import Race, Difficulty
 from sc2.player import Bot, Computer
 from sc2.main import run_game
-from stable_baselines3 import PPO
-from sc2env import Sc2Env
 
 from janusbot import JanusBot
 bot = Bot(Race.Protoss, JanusBot(), 'JanusBot')
 
 # Start game
 if __name__ == '__main__':
-    subprocess.Popen(['python', 'test_model.py'])
+    subprocess.Popen(['python3', 'test_model.py'])
     if "--LadderServer" in sys.argv:
         # Ladder game started by LadderManager
         print("Starting ladder game...")
@@ -21,7 +19,7 @@ if __name__ == '__main__':
     else:
         # Local game
         print("Starting local game...")
-        run_game(sc2.maps.get("2000AtmospheresAIE"), [
+        run_game(sc2.maps.get("BlackburnAIE"), [
             bot,
             Computer(Race.Protoss, Difficulty.VeryHard)
         ], realtime=True)

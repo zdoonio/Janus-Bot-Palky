@@ -10,17 +10,17 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 
 
-LOAD_MODEL = "models/janusmind/v0_2_2.zip"
+LOAD_MODEL = "data/models/janusmind/v0_2_2.zip"
 # Environment:
-env = Sc2Env()
+env = Sc2Env(is_train = True)
 
 # load the model:
 model = PPO.load(LOAD_MODEL, env=env)
 
 model_name = f"janusmind"
 
-models_dir = f"models/{model_name}/"
-logdir = f"logs/{model_name}/"
+models_dir = f"data/models/{model_name}/"
+logdir = f"data/logs/{model_name}/"
 
 
 conf_dict = {"Model": "v0.2.2",

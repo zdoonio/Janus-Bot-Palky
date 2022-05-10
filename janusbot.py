@@ -1,4 +1,6 @@
+import random
 from typing import List
+from loguru import logger
 from sc2.bot_ai import BotAI  # parent class we inherit from
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.upgrade_id import UpgradeId
@@ -63,7 +65,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         
         while no_action:
             try:
-                with open('state_rwd_action.pkl', 'rb') as f:
+                with open('data/state_rwd_action.pkl', 'rb') as f:
                     state_rwd_action = pickle.load(f)
 
                     if state_rwd_action['action'] is None:
@@ -618,7 +620,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         cv2.imshow('map',cv2.flip(cv2.resize(map, None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST), 0))
         cv2.waitKey(1)
 
-        if SAVE_REPLAY:
+        if self.SAVE_REPLAY:
             # save map image into "replays dir"
             cv2.imwrite(f"replays/{int(time.time())}-{iteration}.png", map)
 

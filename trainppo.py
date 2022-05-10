@@ -8,8 +8,8 @@ import wandb
 
 model_name = f"{int(time.time())}"
 
-models_dir = f"models/{model_name}/"
-logdir = f"logs/{model_name}/"
+models_dir = f"data/models/{model_name}/"
+logdir = f"data/logs/{model_name}/"
 
 
 conf_dict = {"Model": "v0.2.2",
@@ -33,7 +33,7 @@ if not os.path.exists(models_dir):
 if not os.path.exists(logdir):
 	os.makedirs(logdir)
 
-env = Sc2Env()
+env = Sc2Env(is_train = True)
 
 model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logdir)
 

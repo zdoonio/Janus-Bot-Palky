@@ -1,8 +1,8 @@
-models/*
+data/models/*
 *.pkl
 *.txt
 .history
 __pycache__
 wandb/*
-logs/*
+data/logs/*
 sc2/*

@@ -8,7 +8,7 @@ import os
 
 class Sc2Env(gym.Env):
 	"""Custom Environment that follows gym interface"""
-	def __init__(self):
+	def __init__(self, is_train):
 		super(Sc2Env, self).__init__()
 		# Define action and observation space
 		# They must be gym.spaces objects
@@ -16,6 +16,7 @@ class Sc2Env(gym.Env):
 		self.action_space = spaces.Discrete(18)
 		self.observation_space = spaces.Box(low=0, high=255,
 											shape=(224, 224, 3), dtype=np.uint8)
+		self.is_train = is_train
 
 	def step(self, action):
 		wait_for_action = True
@@ -44,7 +45,7 @@ class Sc2Env(gym.Env):
 		wait_for_state = True
 		while wait_for_state:
 			try:
-				if os.path.getsize('state_rwd_action.pkl') > 0:
+				if os.path.getsize('data/state_rwd_action.pkl') > 0:
 					with open('data/state_rwd_action.pkl', 'rb') as f:
 						state_rwd_action = pickle.load(f)
 						if state_rwd_action['action'] is None:
@@ -75,14 +76,14 @@ class Sc2Env(gym.Env):
 		return observation, reward, done, info
 
 
-	def reset(self, is_train):
+	def reset(self):
 		map = np.zeros((224, 224, 3), dtype=np.uint8)
 		observation = map
 		data = {"state": map, "reward": 0, "action": None, "done": False}  # empty action waiting for the next one!
 		with open('data/state_rwd_action.pkl', 'wb') as f:
 			pickle.dump(data, f)
 
-		if is_train:
+		if self.is_train:
 			print("RESETTING ENVIRONMENT!!!!!!!!!!!!!")
       		# run incredibot-sct.py non-blocking:
 			subprocess.Popen(['python', 'run_train.py'])
