@@ -43,4 +43,4 @@ while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/{TIMESTEPS*iters}")
+	model.save(f"{models_dir}/v0.2.2")
