@@ -25,19 +25,6 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
     steps_for_pun = np.linspace(0, 1, total_steps)
     step_punishment = ((np.exp(steps_for_pun**3) / 10) - 0.1) * 10
 
-    async def warp_new_units(self, proxy: Unit) -> None:
-        for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
-            abilities = await self.get_available_abilities(warpgate)
-            # all the units have the same cooldown anyway so let's just look at ZEALOT
-            if AbilityId.WARPGATETRAIN_STALKER in abilities:
-                pos = proxy.position.to2.random_on_distance(4)
-                placement = await self.find_placement(AbilityId.WARPGATETRAIN_STALKER, pos, placement_step=1)
-                if placement is None:
-                    # return ActionResult.CantFindPlacementLocation
-                    print("can't place")
-                    return
-                warpgate.warp_in(UnitTypeId.STALKER, placement)
-                
     def do_random_attack(self, unit: Unit):
         invisible_enemy_start_locations = [p for p in self.enemy_start_locations if not self.is_visible(p)]
         if self.enemy_structures:
@@ -49,7 +36,143 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             target = np.random.uniform((area.x, area.y), (area.right, area.top))
             target = Point2(target)
             if self.in_pathing_grid(target) and not self.is_visible(target):
-                unit.attack(target)        
+                unit.attack(target)
+                
+    def flee_to_base(self, unit_type: UnitTypeId):
+        if self.units(unit_type).idle.amount > 0:
+                for unit in self.units(unit_type):
+                    unit.attack(self.start_location)            
+                
+    def scount(self, curent_iteration: int): 
+        # are there any idle probes:
+        try:
+            self.last_sent
+        except:
+            self.last_sent = 0
+
+        # if self.last_sent doesnt exist yet:
+        if (curent_iteration - self.last_sent) > 400:
+            try:
+                if self.units(UnitTypeId.PROBE).idle.exists:
+                    # pick one of these randomly:
+                    probe = random.choice(self.units(UnitTypeId.PROBE).idle)
+                    self.do_random_attack(probe)
+                else:
+                    probe = random.choice(self.units(UnitTypeId.PROBE))
+                    self.do_random_attack(probe)
+                    # send probe towards enemy base:
+                    
+                self.last_sent = curent_iteration 
+            except Exception as e:
+                pass          
+            
+    def train_troop_in_building(self, building_type: UnitTypeId, troop_type: UnitTypeId) -> None:
+        #might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
+        if self.can_afford(troop_type):
+            for gate in self.structures(building_type).ready.idle:
+                if self.can_afford(troop_type):
+                    gate.train(troop_type)           
+            
+    def train_voidray(self) -> None:
+        if self.can_afford(UnitTypeId.VOIDRAY) and self.units(UnitTypeId.VOIDRAY).amount < 12:
+                    for sg in self.structures(UnitTypeId.STARGATE).ready.idle:
+                        if self.can_afford(UnitTypeId.VOIDRAY):
+                            sg.train(UnitTypeId.VOIDRAY)                
+                
+    async def expand(self) -> None:
+        found_something = False
+        if self.supply_left < 4:
+            # build pylons. 
+            if self.already_pending(UnitTypeId.PYLON) == 0:
+                if self.can_afford(UnitTypeId.PYLON):
+                    await self.build(UnitTypeId.PYLON, near=random.choice(self.townhalls))
+                    found_something = True
+
+        if not found_something:
+
+            for nexus in self.townhalls:
+                # get worker count for this nexus:
+                worker_count = len(self.workers.closer_than(10, nexus))
+                if worker_count < 22: # 16+3+3
+                    if nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
+                        nexus.train(UnitTypeId.PROBE)
+                        found_something = True
+
+                # have we built enough assimilators?
+                # find vespene geysers
+                for geyser in self.vespene_geyser.closer_than(10, nexus):
+                    # build assimilator if there isn't one already:
+                    if not self.can_afford(UnitTypeId.ASSIMILATOR):
+                        break
+                    if not self.structures(UnitTypeId.ASSIMILATOR).closer_than(2.0, geyser).exists:
+                        await self.build(UnitTypeId.ASSIMILATOR, geyser)
+                        found_something = True
+
+            if not found_something:
+                if self.already_pending(UnitTypeId.NEXUS) == 0 and self.can_afford(UnitTypeId.NEXUS):
+                    await self.expand_now()
+                    
+    async def build_advanced_building(self, building_one: UnitTypeId, building_two: UnitTypeId, close_to_one: int, close_to_two: int, build_cybernetics: bool = True) -> None:
+        # iterate thru all nexus and see if these buildings are close
+        for nexus in self.townhalls:
+            # is there is not a gateway close:
+            if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
+                # if we can afford it:
+                if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
+                    # build gateway
+                    await self.build(UnitTypeId.GATEWAY, near=nexus)
+                        
+            # if the is not a cybernetics core close:
+            if build_cybernetics:
+                self.build_building_close_to_nexus(nexus, UnitTypeId.CYBERNETICSCORE, 100)
+
+            # build advanced building one:
+            self.build_building_close_to_nexus(nexus, building_one, close_to_one)
+            
+            # build advanced building two:
+            self.build_building_close_to_nexus(nexus, building_two, close_to_two)         
+                    
+    async def build_building_close_to_nexus(self, nexus: Unit, unit_type: UnitTypeId, close_to: int):
+        if not self.structures(unit_type).closer_than(close_to, nexus).exists:
+                # if we can afford it:
+                if self.can_afford(unit_type) and self.already_pending(unit_type) == 0:
+                    # build cybernetics core
+                    await self.build(unit_type, near=nexus)                
+                    
+    async def build_proxy_pylon(self):
+        #await self.chat_send("(probe)(pylon) building proxy pylon")
+        point = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
+                  
+        if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)):
+            await self.build(UnitTypeId.PYLON, near=point)
+            self.proxy_built = True
+                
+        if(not self.structures(UnitTypeId.PYLON).closer_than(20, point).exists): 
+            self.proxy_built = False      
+            
+    async def build_more_gates(self):
+        if self.structures(UnitTypeId.PYLON).exists:
+                    pylon = self.structures(UnitTypeId.PYLON).ready
+                    # If we have no cyber core, build one
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE):
+                        if (self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0):
+                            await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
+                    # Build up to 4 gates
+                    if (self.can_afford(UnitTypeId.GATEWAY) and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4):
+                        await self.build(UnitTypeId.GATEWAY, near=pylon)                                
+                    
+    async def warp_new_units(self, ability: AbilityId, unit_type: UnitTypeId, proxy: Unit) -> None:
+        for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
+            abilities = await self.get_available_abilities(warpgate)
+            # all the units have the same cooldown anyway so let's just look at ZEALOT
+            if ability in abilities:
+                pos = proxy.position.to2.random_on_distance(4)
+                placement = await self.find_placement(ability, pos, placement_step=1)
+                if placement is None:
+                    # return ActionResult.CantFindPlacementLocation
+                    print("can't place")
+                    return
+                warpgate.warp_in(unit_type, placement)        
                          
                 
     async def on_step(self, iteration: int): # on_step is a method that is called every step of the game.
@@ -85,136 +208,226 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         '''
         0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
         1: build stargate (or up to one) (evenly)
-        2: build voidray (evenly)
-        3: send scout (evenly/random/closest to enemy?)
-        4: attack (known buildings, units, then enemy base, just go in logical order.)
-        5: voidray flee (back to base)
-        6: build zealtos
-        7: build defences eg. photon cannon
-        8: do upgrades
-        9: zealots and stalkers flee
-        10: attack stalker units
-        11: defend attack
-        12: chronoboost nexus or cybernetics
-        13: build proxy pylon
-        14: build more gates
-        15: cannon rush 
-        16: warp gate build
-        17: find adept shades
-        18: micro stalkers
-        19: flee probes when attacked
-        20: if enemy being aggresive build oracle 
-        21: attack oracle
+        2: build proxy pylon
+        3: build more gates
+        4: build dark shrine
+        5: build defences eg. photon cannon
+        6: train zealtos
+        7: train voidray (evenly)
+        8: train zealots in warp gate
+        9: train stalkers in warp gate
+        10: train dark templars in warp gate
+        11: send scout (evenly/random/closest to enemy?)
+        12: do upgrades
+        13: chronoboost nexus or cybernetics
+        14: defend attack
+        15: attack dark templars / zealots
+        16: attack stalker units
+        17: attack voidray (known buildings, units, then enemy base, just go in logical order.)
+        18: zealots flee (back to base)
+        19: voidray flee (back to base)
+        20: cannon rush
+        21: micro stalkers
+        22: find adept shades
+        23: flee probes when attacked
+        24: if enemy being aggresive build oracle 
+        25: attack oracle
         '''
         
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
         if action == 0:
             try:
-                found_something = False
-                if self.supply_left < 4:
-                    # build pylons. 
-                    if self.already_pending(UnitTypeId.PYLON) == 0:
-                        if self.can_afford(UnitTypeId.PYLON):
-                            await self.build(UnitTypeId.PYLON, near=random.choice(self.townhalls))
-                            found_something = True
-
-                if not found_something:
-
-                    for nexus in self.townhalls:
-                        # get worker count for this nexus:
-                        worker_count = len(self.workers.closer_than(10, nexus))
-                        if worker_count < 22: # 16+3+3
-                            if nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
-                                nexus.train(UnitTypeId.PROBE)
-                                found_something = True
-
-                        # have we built enough assimilators?
-                        # find vespene geysers
-                        for geyser in self.vespene_geyser.closer_than(10, nexus):
-                            # build assimilator if there isn't one already:
-                            if not self.can_afford(UnitTypeId.ASSIMILATOR):
-                                break
-                            if not self.structures(UnitTypeId.ASSIMILATOR).closer_than(2.0, geyser).exists:
-                                await self.build(UnitTypeId.ASSIMILATOR, geyser)
-                                found_something = True
-
-                if not found_something:
-                    if self.already_pending(UnitTypeId.NEXUS) == 0 and self.can_afford(UnitTypeId.NEXUS):
-                        await self.expand_now()
-
+                self.expand()
             except Exception as e:
                 print(e)
-
 
         #1: build stargate (or up to one) (evenly)
         elif action == 1:
             try:
-                # iterate thru all nexus and see if these buildings are close
-                for nexus in self.townhalls:
-                    # is there is not a gateway close:
-                    if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
-                            # build gateway
-                            await self.build(UnitTypeId.GATEWAY, near=nexus)
-                        
-                    # if the is not a cybernetics core close:
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).closer_than(100, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
-                            # build cybernetics core
-                            await self.build(UnitTypeId.CYBERNETICSCORE, near=nexus)
-
-                    # if there is not a stargate close:
-                    if not self.structures(UnitTypeId.STARGATE).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.STARGATE) and self.already_pending(UnitTypeId.STARGATE) == 0:
-                            # build stargate
-                            await self.build(UnitTypeId.STARGATE, near=nexus)
-
+                await self.build_advanced_building(UnitTypeId.STARGATE, UnitTypeId.STARGATE, 100, 20, build_cybernetics = True)
             except Exception as e:
                 print("Action 1", e)
 
 
-        #2: build voidray (random stargate)
+        #2: build proxy pylon
         elif action == 2:
             try:
-                if self.can_afford(UnitTypeId.VOIDRAY) and self.units(UnitTypeId.VOIDRAY).amount < 12:
-                    for sg in self.structures(UnitTypeId.STARGATE).ready.idle:
-                        if self.can_afford(UnitTypeId.VOIDRAY):
-                            sg.train(UnitTypeId.VOIDRAY)
-            
+                await self.build_proxy_pylon()
             except Exception as e:
                 print("Action 2", e)
 
-        #3: send scout
+        #3: build more gates
         elif action == 3:
-            # are there any idle probes:
             try:
-                self.last_sent
-            except:
-                self.last_sent = 0
-
-            # if self.last_sent doesnt exist yet:
-            if (iteration - self.last_sent) > 400:
-                try:
-                    if self.units(UnitTypeId.PROBE).idle.exists:
-                        # pick one of these randomly:
-                        probe = random.choice(self.units(UnitTypeId.PROBE).idle)
-                        self.do_random_attack(probe)
-                    else:
-                        probe = random.choice(self.units(UnitTypeId.PROBE))
-                        self.do_random_attack(probe)
-                    # send probe towards enemy base:
-                    
-                    self.last_sent = iteration
-
-                except Exception as e:
-                    pass
-
-
-        #4: voidray attack (known buildings, units, then enemy base, just go in logical order.)
+                await self.build_more_gates()
+            except Exception as e:
+                print("Action 3", e)
+                
+        #4: build dark shrine
         elif action == 4:
+            try:
+                await self.build_advanced_building(UnitTypeId.TWILIGHTCOUNCIL, UnitTypeId.DARKSHRINE, 100, 100)
+            except Exception as e:
+                print("Action 4", e)            
+
+        #5: build defences eg. photon cannon
+        elif action == 5:
+            try:
+                await self.build_advanced_building(UnitTypeId.FORGE, UnitTypeId.PHOTONCANNON, 100, 15)
+            except Exception as e:
+                print("Action 5", e)    
+                
+        #6: train zealtos
+        elif action == 6:
+            try:
+                self.train_troop_in_building(UnitTypeId.GATEWAY, UnitTypeId.ZEALOT)
+            except Exception as e:
+                print("Action 6", e) 
+                
+        #7: train voidray (evenly)
+        elif action == 7:
+            try:
+                self.train_troop_in_building(UnitTypeId.STARGATE, UnitTypeId.VOIDRAY)
+            except Exception as e:
+                print("Action 7", e) 
+                
+        #8: train zealots in warp gate
+        elif action == 8:
+            try:
+                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                    proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
+                    await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, proxy)
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1: 
+                    random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
+                    await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, random_nexus_pylon)
+            except Exception as e:
+                print("Action 8", e) 
+                
+        #9: train stalkers in warp gate        
+        elif action == 9:     
+            try:
+                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                    proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
+                    await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, proxy)
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1: 
+                    random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
+                    await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, random_nexus_pylon)
+            except Exception as e:
+                print("Action 9", e)  
+        
+        #10: train dark templars in warp gate
+        elif action == 10:
+            try:
+                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                    proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
+                    await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, proxy)
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1: 
+                    random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
+                    await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, random_nexus_pylon)
+            except Exception as e:
+                print("Action 10", e)
+                
+        #11: send scout (evenly/random/closest to enemy?)
+        elif action == 11:
+            try:
+                self.scount(curent_iteration = iteration)
+            except Exception as e:
+                print("Action 11", e)              
+        
+        # 12: do upgrades, 
+        # now it is simple version just do level one upgrades
+        # TODO: add multiple upgrades and calculate costs
+        elif action == 12:
+            try:
+                for forge in self.structures(UnitTypeId.FORGE).ready.idle:
+                    if self.can_afford(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1)
+                    if self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL1)
+                    if self.can_afford(UpgradeId.PROTOSSSHIELDSLEVEL1):
+                        forge.research(UpgradeId.PROTOSSSHIELDSLEVEL1)
+                    if self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL2):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL2)
+                    if self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL2):
+                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL2)
+                    if self.can_afford(UpgradeId.PROTOSSSHIELDSLEVEL2):
+                        forge.research(UpgradeId.PROTOSSSHIELDSLEVEL2)    
+                        
+                if (self.structures(UnitTypeId.CYBERNETICSCORE).ready and self.can_afford(AbilityId.RESEARCH_WARPGATE) and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0):
+                    ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
+                    ccore.research(UpgradeId.WARPGATERESEARCH)
+
+                # Morph to warp gate when research is complete
+                for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
+                    if self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                        gateway(AbilityId.MORPH_WARPGATE)        
+                        
+            except Exception as e:
+                print("Action 12", e)
+        
+        # 13: chronoboost nexus or cybernetics core
+        elif action == 13:
+            try:
+                for nexus in self.structures(UnitTypeId.NEXUS):
+                    if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
+                        if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
+                            if nexus.energy >= 50:
+                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
+                    else:
+                        ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
+                        if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
+                            if nexus.energy >= 50:
+                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
+            except Exception as e:
+                print("Action 13", e)
+                
+        # 14: defend attack try to use zealots
+        elif action == 14:
+            try:
+                targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
+                for nexus in self.structures(UnitTypeId.NEXUS):
+                    targets.closer_than(10, nexus)
+                for zealot in self.units(UnitTypeId.ZEALOT):
+                    if(zealot.is_idle):
+                        target = targets.closest_to(zealot)
+                        zealot.attack(target)
+            except Exception as e:
+                print("Action 14", e)
+                
+        # 15: attack dark templars
+        # Make stalkers attack either closest enemy unit or enemy spawn location
+        elif action == 15:
+            try:
+                if self.units(UnitTypeId.DARKTEMPLAR).amount > 1:
+                    for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
+                        targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                        if targets:
+                            target = targets.closest_to(templar)
+                            templar.attack(target)
+                        else:
+                            self.do_random_attack(templar)
+                        
+            except Exception as e:
+                print("Action 15", e)
+                
+        # 16: attack stalker units
+        # Make stalkers attack either closest enemy unit or enemy spawn location
+        elif action == 16:
+            try:
+                if self.units(UnitTypeId.STALKER).amount > 3:
+                    for stalker in self.units(UnitTypeId.STALKER).ready.idle:
+                        targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+                        if targets:
+                            target = targets.closest_to(stalker)
+                            stalker.attack(target)
+                        else:
+                            self.do_random_attack(stalker)
+                        
+            except Exception as e:
+                print("Action 16", e)                                 
+                
+        #17: attack voidray (known buildings, units, then enemy base, just go in logical order.)
+        elif action == 17:
             try:
                 targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked) 
                 if targets.closer_than(20, self.start_location):
@@ -236,174 +449,27 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             self.do_random_attack(voidray)
             
             except Exception as e:
-                print("Action 4", e)
-            
-
-        #5: voidray flee (back to base)
-        elif action == 5:
-            if self.units(UnitTypeId.VOIDRAY).idle.amount > 0:
-                for voidray in self.units(UnitTypeId.VOIDRAY):
-                    voidray.attack(self.start_location)
-                    
-        # 6: Build zelatos on gateway
-        elif action == 6:
-            try:
-                #might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
-                if self.can_afford(UnitTypeId.ZEALOT):
-                    for gate in self.structures(UnitTypeId.GATEWAY).ready.idle:
-                        if self.can_afford(UnitTypeId.ZEALOT):
-                            gate.train(UnitTypeId.ZEALOT)             
-                            
-            except Exception as e:
-                print("Action 6", e)
+                print("Action 17", e)        
                 
-        #7: build defences (or up to one) (evenly)
-        elif action == 7:
-            try:
-                # iterate thru all nexus and see if these buildings are close
-                for nexus in self.townhalls:
-                    # is there is not a gateway close:
-                    if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
-                            # build gateway
-                            await self.build(UnitTypeId.GATEWAY, near=nexus)
-                        
-                    # if the is not a forge close:
-                    if not self.structures(UnitTypeId.FORGE).closer_than(20, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.FORGE) and self.already_pending(UnitTypeId.FORGE) == 0:
-                            # build cybernetics core
-                            await self.build(UnitTypeId.FORGE, near=nexus)
-
-                    # if there is not a forge close:
-                    if not self.structures(UnitTypeId.PHOTONCANNON).closer_than(5, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.PHOTONCANNON) and self.already_pending(UnitTypeId.PHOTONCANNON) == 0:
-                            # build stargate
-                            await self.build(UnitTypeId.PHOTONCANNON, near=nexus)
-
-            except Exception as e:
-                print("Action 7", e)
-                
-        # 8: do upgrades, 
-        # now it is simple version just do level one upgrades
-        # TODO: add multiple upgrades and calculate costs
-        elif action == 8:
-            try:
-                for forge in self.structures(UnitTypeId.FORGE).ready.idle:
-                    if self.can_afford(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1):
-                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1)
-                    elif self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL1):
-                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL1)
-                    elif self.can_afford(UpgradeId.PROTOSSSHIELDSLEVEL1):
-                        forge.research(UpgradeId.PROTOSSSHIELDSLEVEL1)
-                        
-                if (
-                    self.structures(UnitTypeId.CYBERNETICSCORE).ready and self.can_afford(AbilityId.RESEARCH_WARPGATE)
-                    and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0
-                ):
-                    ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
-                    ccore.research(UpgradeId.WARPGATERESEARCH)
-
-                # Morph to warp gate when research is complete
-                for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
-                    if self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
-                        gateway(AbilityId.MORPH_WARPGATE)        
-                        
-            except Exception as e:
-                print("Action 8", e) 
-                
-        # 9: zealots flee
+        # 18: zealots flee
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack 
-        elif action == 9:
+        elif action == 18:
             try:
-                if self.units(UnitTypeId.ZEALOT).idle.amount > 0:
-                    for ground in self.units(UnitTypeId.ZEALOT):
-                        ground.attack(self.start_location)
-                        
+                self.flee_to_base(UnitTypeId.ZEALOT)  
             except Exception as e:
-                print("Action 9", e)      
+                print("Action 18", e)
                 
-        # 10: attack stalker units
-        # Make stalkers attack either closest enemy unit or enemy spawn location
-        elif action == 10:
+        # 19: voidray flee
+        # TODO: think about more complex algorythm for flee for eg. count chances to being attack 
+        elif action == 19:
             try:
-                if self.units(UnitTypeId.STALKER).amount > 3:
-                    for stalker in self.units(UnitTypeId.STALKER).ready.idle:
-                        targets = (self.enemy_units | self.enemy_structures).filter(lambda unit: unit.can_be_attacked)
-                        if targets:
-                            target = targets.closest_to(stalker)
-                            stalker.attack(target)
-                        else:
-                            self.do_random_attack(stalker)
-                        
+                self.flee_to_base(UnitTypeId.VOIDRAY)  
             except Exception as e:
-                print("Action 10", e)
-                
-        # 11: defend attack try to use zealots
-        elif action == 11:
-            try:
-                targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
-                for nexus in self.structures(UnitTypeId.NEXUS):
-                    targets.closer_than(10, nexus)
-                for zealot in self.units(UnitTypeId.ZEALOT):
-                    if(zealot.is_idle):
-                        target = targets.closest_to(zealot)
-                        zealot.attack(target)
-            except Exception as e:
-                print("Action 11", e)
-                                      
-        # 12: chronoboost nexus or cybernetics core
-        elif action == 12:
-            try:
-                for nexus in self.structures(UnitTypeId.NEXUS):
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
-                        if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
-                            if nexus.energy >= 50:
-                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
-                    else:
-                        ccore = self.structures(UnitTypeId.CYBERNETICSCORE).ready.first
-                        if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
-                            if nexus.energy >= 50:
-                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
-            except Exception as e:
-                print("Action 12", e)                   
-                        
-        # 13: build proxy pylon
-        elif action == 13:
-            try:
-                #await self.chat_send("(probe)(pylon) building proxy pylon")
-                point = self.game_info.map_center.towards(self.enemy_start_locations[0], 20)
-                  
-                if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)):
-                    await self.build(UnitTypeId.PYLON, near=point)
-                    self.proxy_built = True
-                
-                if(not self.structures(UnitTypeId.PYLON).closer_than(20, point).exists): 
-                    self.proxy_built = False   
-                  
-            except Exception as e:
-                print("Action 13", e)        
-                
-        # 14: build more gates
-        elif action == 14:
-            try:
-                if self.structures(UnitTypeId.PYLON).exists:
-                    pylon = self.structures(UnitTypeId.PYLON).ready
-                    # If we have no cyber core, build one
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE):
-                        if (self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0):
-                            await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
-                    # Build up to 4 gates
-                    if (self.can_afford(UnitTypeId.GATEWAY) and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4):
-                        await self.build(UnitTypeId.GATEWAY, near=pylon)
-            except Exception as e:
-                print("Action 14", e)           
-                
-        # 15: cannon rush
+                print("Action 19", e)               
+
+        # 20: cannon rush
         # TODO: maybe do more complex tactics for cannon rush
-        elif action == 15:
+        elif action == 20:
             try:
                 #await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
                 if not self.townhalls:
@@ -454,22 +520,10 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         await self.build(building, near=pos)       
                     
             except Exception as e:
-                print("Action 15", e)    
+                print("Action 20", e)        
                 
-        #16: warp gate train stalkers        
-        elif action == 16:     
-            try:
-                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
-                    proxy = self.structures(UnitTypeId.PYLON).closest_to(self.enemy_start_locations[0])
-                    await self.warp_new_units(proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1: 
-                    random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(self.townhalls.random)
-                    await self.warp_new_units(random_nexus_pylon) 
-            except Exception as e:
-                print("Action 16", e)      
-                
-        # 17: micro stalkers        
-        elif action == 17:
+        # 21: micro stalkers        
+        elif action == 21:
             try:
                 if self.units(UnitTypeId.STALKER).amount > 3:
                     stalkers = self.units(UnitTypeId.STALKER)
@@ -486,10 +540,10 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                             else:
                                 stalker.move(pylon)    
             except Exception as e:
-                print("Action 17", e)         
+                print("Action 21", e)         
                 
-        #18: find adepts shades    
-        elif action == 18:
+        #22: find adepts shades    
+        elif action == 22:
             try:
                 adepts = self.units(UnitTypeId.ADEPT)
                 if adepts and not self.shaded:
@@ -522,7 +576,7 @@ class JanusBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         closest_adept = remaining_adepts.closest_to(previous_shade_location)
                         self.shades_mapping[closest_adept.tag] = shade.tag   
             except Exception as e:
-                print("Action 18", e)                              
+                print("Action 22", e)                              
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
