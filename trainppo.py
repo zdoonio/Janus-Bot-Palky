@@ -12,7 +12,7 @@ models_dir = f"data/models/{model_name}/"
 logdir = f"data/logs/{model_name}/"
 
 
-conf_dict = {"Model": "v0.2.2",
+conf_dict = {"Model": "v0.3.0",
              "Machine": "Main",
              "policy":"MlpPolicy",
              "model_save_name": model_name}
@@ -43,4 +43,4 @@ while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/v0_2_2.zip")
+	model.save(f"{models_dir}/v0_3_0.zip")
