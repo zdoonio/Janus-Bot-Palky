@@ -307,7 +307,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, nexus).exists:
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_locationxus).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, random_nexus_pylon)
@@ -323,7 +323,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, nexus).exists:
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_location).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, random_nexus_pylon)
@@ -339,7 +339,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, nexus).exists:
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_location).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, random_nexus_pylon)
