@@ -13,7 +13,7 @@ class Sc2Env(gym.Env):
 		# Define action and observation space
 		# They must be gym.spaces objects
 		# Example when using discrete actions:
-		self.action_space = spaces.Discrete(18)
+		self.action_space = spaces.Discrete(24)
 		self.observation_space = spaces.Box(low=0, high=255,
 											shape=(224, 224, 3), dtype=np.uint8)
 		self.is_train = is_train
@@ -69,7 +69,7 @@ class Sc2Env(gym.Env):
 				state = map
 				reward = 0
 				done = False
-				action = 3
+				action = 22
 
 		info ={}
 		observation = state

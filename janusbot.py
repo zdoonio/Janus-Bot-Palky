@@ -301,11 +301,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 8: train zealots in warp gate
         elif action == 8:
             try:
+                targets = (self.enemy_units).filter(
+                    lambda unit: unit.can_be_attacked)
                 if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, nexus).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, random_nexus_pylon)
@@ -315,11 +317,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 9: train stalkers in warp gate
         elif action == 9:
             try:
+                targets = (self.enemy_units).filter(
+                    lambda unit: unit.can_be_attacked)
                 if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, nexus).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, random_nexus_pylon)
@@ -329,11 +333,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 10: train dark templars in warp gate
         elif action == 10:
             try:
+                targets = (self.enemy_units).filter(
+                    lambda unit: unit.can_be_attacked)
                 if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
+                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, nexus).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
                     await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, random_nexus_pylon)
@@ -370,6 +376,11 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     ccore = self.structures(
                         UnitTypeId.CYBERNETICSCORE).ready.first
                     ccore.research(UpgradeId.WARPGATERESEARCH)
+                    
+                if (self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready and self.can_afford(AbilityId.RESEARCH_CHARGE) and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0):
+                    council = self.structures(
+                        UnitTypeId.TWILIGHTCOUNCIL).ready.first
+                    council.research(UpgradeId.RESEARCH_CHARGE)    
 
                 # Morph to warp gate when research is complete
                 for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
@@ -402,7 +413,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 targets = (self.enemy_units).filter(
                     lambda unit: unit.can_be_attacked)
                 for nexus in self.structures(UnitTypeId.NEXUS):
-                    targets.closer_than(10, nexus)
+                    targets = targets.closer_than(10, nexus)
                 for zealot in self.units(UnitTypeId.ZEALOT):
                     if(zealot.is_idle):
                         target = targets.closest_to(zealot)
@@ -414,7 +425,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 15:
             try:
-                if self.units(UnitTypeId.DARKTEMPLAR).amount > 1:
+                if self.units(UnitTypeId.DARKTEMPLAR).amount > 2:
                     for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
@@ -431,7 +442,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 16:
             try:
-                if self.units(UnitTypeId.STALKER).amount > 3:
+                if self.units(UnitTypeId.STALKER).amount > 6:
                     for stalker in self.units(UnitTypeId.STALKER).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
