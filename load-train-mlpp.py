@@ -10,7 +10,7 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 
 
-LOAD_MODEL = "data/models/janusmind/v0_2_2.zip"
+LOAD_MODEL = "data/models/janusmind/v0_2_2"
 # Environment:
 env = Sc2Env(is_train = True)
 

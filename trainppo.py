@@ -6,7 +6,7 @@ from wandb.integration.sb3 import WandbCallback
 import wandb
 
 
-model_name = f"{int(time.time())}"
+model_name = f"janusmind"
 
 models_dir = f"data/models/{model_name}/"
 logdir = f"data/logs/{model_name}/"
@@ -43,4 +43,4 @@ while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/v0.2.2.zip")
+	model.save(f"{models_dir}/v0_2_2.zip")
