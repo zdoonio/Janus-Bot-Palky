@@ -431,7 +431,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 15:
             try:
                 if self.units(UnitTypeId.DARKTEMPLAR).amount > 2:
-                    for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
+                    for templar in self.units(UnitTypeId.DARKTEMPLAR | UnitTypeId.ZEALOT).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
                         if targets:
