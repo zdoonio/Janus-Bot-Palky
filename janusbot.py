@@ -382,7 +382,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                         UnitTypeId.CYBERNETICSCORE).ready.first
                     ccore.research(UpgradeId.WARPGATERESEARCH)
                     
-                if (self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready and self.can_afford(AbilityId.RESEARCH_CHARGE) and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0):
+                if (self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready and self.can_afford(AbilityId.RESEARCH_CHARGE)):
                     council = self.structures(
                         UnitTypeId.TWILIGHTCOUNCIL).ready.first
                     council.research(UpgradeId.RESEARCH_CHARGE)    
