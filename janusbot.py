@@ -413,16 +413,19 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 print("Action 13", e)
 
         # 14: defend attack try to use zealots
+        # TODO: more defensive tactics
         elif action == 14:
             try:
+                # just attack it didn't work yet
                 targets = (self.enemy_units).filter(
                     lambda unit: unit.can_be_attacked)
-                for nexus in self.structures(UnitTypeId.NEXUS):
-                    self.is_attack = targets.closer_than(10, nexus)
-                for zealot in self.units(UnitTypeId.ZEALOT):
-                    if(zealot.is_idle and self.is_attack):
-                        target = targets.closest_to(zealot)
-                        zealot.attack(target)
+                #for nexus in self.structures(UnitTypeId.NEXUS):
+                #    self.is_attack = targets.closer_than(10, nexus)
+                for unit in self.units(UnitTypeId.ZEALOT):
+                    if(unit.is_idle):
+                        target = targets.closest_to(unit)
+                        unit.attack(target)
+               
             except Exception as e:
                 print("Action 14", e)
 
@@ -431,14 +434,14 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 15:
             try:
                 if self.units(UnitTypeId.DARKTEMPLAR).amount > 2:
-                    for templar in self.units(UnitTypeId.DARKTEMPLAR | UnitTypeId.ZEALOT).ready.idle:
+                    for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
                         if targets:
                             target = targets.closest_to(templar)
                             templar.attack(target)
                         else:
-                            self.do_random_attack(templar)
+                            self.do_random_attack(templar)                         
 
             except Exception as e:
                 print("Action 15", e)

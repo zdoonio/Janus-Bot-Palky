@@ -21,5 +21,5 @@ if __name__ == '__main__':
         print("Starting local game...")
         run_game(sc2.maps.get("BlackburnAIE"), [
             bot,
-            Computer(Race.Protoss, Difficulty.VeryHard)
+            Computer(Race.Zerg, Difficulty.Hard)
         ], realtime=True)
