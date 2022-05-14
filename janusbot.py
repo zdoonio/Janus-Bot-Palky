@@ -145,12 +145,17 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 # build cybernetics core
                 await self.build(unit_type, near=nexus)
 
-    async def build_proxy_pylon(self):
+    async def build_proxy_pylon(self, curent_iteration: int):
         # await self.chat_send("(probe)(pylon) building proxy pylon")
+        try:
+            self.last_proxy
+        except:
+            self.last_proxy = 0
+
         point = self.game_info.map_center.towards(
             self.enemy_start_locations[0], 20)
 
-        if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)):
+        if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)) and (curent_iteration - self.last_sent) > 200:
             await self.build(UnitTypeId.PYLON, near=point)
             self.proxy_built = True
 
@@ -164,8 +169,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             if not self.structures(UnitTypeId.CYBERNETICSCORE):
                 if (self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0):
                     await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
-            # Build up to 4 gates
-            if (self.can_afford(UnitTypeId.GATEWAY) and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 4):
+            # Build up to 2 gates
+            if (self.can_afford(UnitTypeId.GATEWAY) and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 2):
                 await self.build(UnitTypeId.GATEWAY, near=pylon)
 
     async def warp_new_units(self, ability: AbilityId, unit_type: UnitTypeId, proxy: Unit) -> None:
@@ -257,7 +262,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 2: build proxy pylon
         elif action == 2:
             try:
-                await self.build_proxy_pylon()
+                await self.build_proxy_pylon(iteration)
             except Exception as e:
                 print("Action 2", e)
 
@@ -413,9 +418,9 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 targets = (self.enemy_units).filter(
                     lambda unit: unit.can_be_attacked)
                 for nexus in self.structures(UnitTypeId.NEXUS):
-                    targets = targets.closer_than(10, nexus)
+                    self.is_attack = targets.closer_than(10, nexus)
                 for zealot in self.units(UnitTypeId.ZEALOT):
-                    if(zealot.is_idle):
+                    if(zealot.is_idle and self.is_attack):
                         target = targets.closest_to(zealot)
                         zealot.attack(target)
             except Exception as e:
@@ -501,6 +506,11 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # TODO: maybe do more complex tactics for cannon rush
         elif action == 20:
             try:
+                self.last_proxy
+            except:
+                self.last_proxy = 0
+
+            try:
                 # await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
                 if not self.townhalls:
                     # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
@@ -531,7 +541,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                             await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
 
                 # If we have less than 2 pylons, build one at the enemy base
-                elif self.structures(UnitTypeId.PYLON).amount < 2:
+                elif self.structures(UnitTypeId.PYLON).amount < 2 and (iteration - self.last_proxy) > 100:
                     if self.can_afford(UnitTypeId.PYLON):
                         pos = self.enemy_start_locations[0].towards(
                             self.game_info.map_center, random.randrange(25, 35))
