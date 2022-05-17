@@ -215,13 +215,18 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         await self.distribute_workers()  # put idle workers back to work
         
         # stalkers micro
-        for stalker in self.units(UnitTypeId.STALKER):
-            if stalker.weapon_cooldown == 0:
-                stalker.attack(enemy_location)
-            elif stalker.weapon_cooldown < 0:
-                stalker.move(pylon)
-            else:
-                stalker.move(pylon)
+        stalkers = self.units(UnitTypeId.STALKER)
+        enemy_location = self.enemy_start_locations[0]
+
+        if self.structures(UnitTypeId.PYLON).ready:
+            pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
+            for stalker in stalkers:
+                if stalker.weapon_cooldown == 0:
+                    stalker.attack(enemy_location)
+                elif stalker.weapon_cooldown < 0:
+                    stalker.move(pylon)
+                else:
+                    stalker.move(pylon)
 
         action = state_rwd_action['action']
         # await BotAction.take_action(action, iteration) this block might be moved
@@ -581,13 +586,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 21: micro stalkers
         elif action == 21:
             try:
-                if self.units(UnitTypeId.STALKER).amount > 3:
-                    stalkers = self.units(UnitTypeId.STALKER)
-                    enemy_location = self.enemy_start_locations[0]
-
-                    if self.structures(UnitTypeId.PYLON).ready:
-                        pylon = self.structures(
-                            UnitTypeId.PYLON).closest_to(enemy_location)
+                print("No action")
             except Exception as e:
                 print("Action 21", e)
 
