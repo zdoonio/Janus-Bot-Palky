@@ -11,7 +11,7 @@ from stable_baselines3.common.sb2_compat.rmsprop_tf_like import RMSpropTFLike
 import wandb
 
 
-LOAD_MODEL = "data/models/janusmind/v0_3_0"
+LOAD_MODEL = "data/models/janusmind/v0_3_1"
 # Environment:
 env = Sc2Env(is_train = True)
 
