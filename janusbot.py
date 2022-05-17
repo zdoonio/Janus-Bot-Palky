@@ -417,8 +417,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 14:
             try:
                 # just attack it didn't work yet
-                targets = (self.enemy_units).filter(
-                    lambda unit: unit.can_be_attacked)
+                targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
                 #for nexus in self.structures(UnitTypeId.NEXUS):
                 #    self.is_attack = targets.closer_than(10, nexus)
                 for unit in self.units(UnitTypeId.ZEALOT):
@@ -800,7 +799,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             print(
                 f"Iter: {iteration}. RWD: {reward}. Z: {self.units(UnitTypeId.ZEALOT).amount} S: {self.units(UnitTypeId.STALKER).amount} DT: {self.units(UnitTypeId.DARKTEMPLAR).amount} VR: {self.units(UnitTypeId.VOIDRAY).amount}")
 
-        save_map = np.resize(map, (224, 224, 3))
+        save_map = np.resize(map, (160, 160, 3))
 
         # write the file:
         data = {"state": save_map, "reward": reward, "action": None,
