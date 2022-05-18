@@ -21,6 +21,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     proxy_built = False
     shaded = False
     shades_mapping = {}
+    siege = False
 
     total_steps = 10000
     steps_for_pun = np.linspace(0, 1, total_steps)
@@ -45,6 +46,11 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         if self.units(unit_type).idle.amount > 0:
             for unit in self.units(unit_type):
                 unit.attack(self.start_location)
+                
+    def flee_to_ramp(self, unit_type: UnitTypeId):
+        if self.units(unit_type).idle.amount > 0:
+            for unit in self.units(unit_type):
+                unit.attack(self.main_base_ramp)            
 
     def scout(self, curent_iteration: int):
         # are there any idle probes:
@@ -81,6 +87,44 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             for sg in self.structures(UnitTypeId.STARGATE).ready.idle:
                 if self.can_afford(UnitTypeId.VOIDRAY):
                     sg.train(UnitTypeId.VOIDRAY)
+                    
+    #TODO: make it use in future versions                
+    def find_adepts_shades(self) -> None:
+        adepts = self.units(UnitTypeId.ADEPT)
+        if adepts and not self.shaded:
+            # Wait for adepts to spawn and then cast ability
+            for adept in adepts:
+                adept(AbilityId.ADEPTPHASESHIFT_ADEPTPHASESHIFT, self._game_info.map_center)
+                self.shaded = True
+                if self.shades_mapping:
+                    # Debug log and draw a line between the two units
+                    for adept_tag, shade_tag in self.shades_mapping.items():
+                        adept = self.units.find_by_tag(adept_tag)
+                        shade = self.units.find_by_tag(shade_tag)
+                        if shade:
+                            logger.info(
+                                f"Remaining shade time: {shade.buff_duration_remain} / {shade.buff_duration_max}")
+                        if adept and shade:
+                            self.client.debug_line_out(
+                                adept, shade, (0, 255, 0))
+                    logger.info(self.shades_mapping)
+                elif self.shaded:
+                    # Find shades
+                    shades = self.units(UnitTypeId.ADEPTPHASESHIFT)
+                    for shade in shades:
+                        remaining_adepts = adepts.tags_not_in(
+                            self.shades_mapping)
+                        # Figure out where the shade should have been "self.client.game_step"-frames ago
+                        forward_position = Point2(
+                            (shade.position.x + math.cos(shade.facing),
+                             shade.position.y + math.sin(shade.facing))
+                        )
+                        previous_shade_location = shade.position.towards(forward_position, -
+                            (self.client.game_step / 16) * shade.movement_speed
+                        )  # See docstring of movement_speed attribute
+                        closest_adept = remaining_adepts.closest_to(
+                            previous_shade_location)
+                        self.shades_mapping[closest_adept.tag] = shade.tag                
 
     async def expand(self) -> None:
         found_something = False
@@ -220,7 +264,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         stalkers = self.units(UnitTypeId.STALKER)
         enemy_location = self.enemy_start_locations[0]
 
-        if self.structures(UnitTypeId.PYLON).ready and self.units(UnitTypeId.STALKER).amount > 3:
+        if self.structures(UnitTypeId.PYLON).ready and self.siege:
             pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
             for stalker in stalkers:
                 if stalker.weapon_cooldown == 0:
@@ -254,11 +298,10 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         18: zealots flee (back to base)
         19: voidray flee (back to base)
         20: cannon rush
-        21: micro stalkers
-        22: find adept shades
-        23: flee probes when attacked
-        24: if enemy being aggresive build oracle 
-        25: attack oracle
+        21: defend probes
+        TODO: flee probes when attacked
+        TODO: if enemy being aggresive build oracle 
+        TODO: attack oracle
         '''
 
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
@@ -464,7 +507,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 16:
             try:
-                if self.units(UnitTypeId.STALKER).amount > 6:
+                if self.units(UnitTypeId.STALKER).amount > 3:
+                    self.siege = True
                     for stalker in self.units(UnitTypeId.STALKER).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
@@ -507,8 +551,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack
         elif action == 18:
             try:
-                if self.units(UnitTypeId.ZEALOT).amount < 4:
-                    self.flee_to_base(UnitTypeId.ZEALOT)
+                if self.units(UnitTypeId.ZEALOT).amount < 6:
+                    self.flee_to_ramp(UnitTypeId.ZEALOT)
             except Exception as e:
                 print("Action 18", e)
 
@@ -585,55 +629,19 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print("Action 20", e)
 
-        # 21: micro stalkers
+        # 21: defend probes
         elif action == 21:
             try:
+                targets = (self.enemy_units).closer_than(5, self.start_location)
+                #for nexus in self.structures(UnitTypeId.NEXUS):
+                #    self.is_attack = targets.closer_than(10, nexus)
+                for unit in self.units(UnitTypeId.PROBE):
+                    if(targets.amount > 3):
+                        target = targets.closest_to(unit)
+                        unit.attack(target)
                 print("No action")
             except Exception as e:
                 print("Action 21", e)
-
-        # 22: find adepts shades
-        elif action == 22:
-            try:
-                adepts = self.units(UnitTypeId.ADEPT)
-                if adepts and not self.shaded:
-                    # Wait for adepts to spawn and then cast ability
-                    for adept in adepts:
-                        adept(AbilityId.ADEPTPHASESHIFT_ADEPTPHASESHIFT,
-                              self._game_info.map_center)
-                    self.shaded = True
-                elif self.shades_mapping:
-                    # Debug log and draw a line between the two units
-                    for adept_tag, shade_tag in self.shades_mapping.items():
-                        adept = self.units.find_by_tag(adept_tag)
-                        shade = self.units.find_by_tag(shade_tag)
-                        if shade:
-                            logger.info(
-                                f"Remaining shade time: {shade.buff_duration_remain} / {shade.buff_duration_max}")
-                        if adept and shade:
-                            self.client.debug_line_out(
-                                adept, shade, (0, 255, 0))
-                    logger.info(self.shades_mapping)
-                elif self.shaded:
-                    # Find shades
-                    shades = self.units(UnitTypeId.ADEPTPHASESHIFT)
-                    for shade in shades:
-                        remaining_adepts = adepts.tags_not_in(
-                            self.shades_mapping)
-                        # Figure out where the shade should have been "self.client.game_step"-frames ago
-                        forward_position = Point2(
-                            (shade.position.x + math.cos(shade.facing),
-                             shade.position.y + math.sin(shade.facing))
-                        )
-                        previous_shade_location = shade.position.towards(
-                            forward_position, -
-                            (self.client.game_step / 16) * shade.movement_speed
-                        )  # See docstring of movement_speed attribute
-                        closest_adept = remaining_adepts.closest_to(
-                            previous_shade_location)
-                        self.shades_mapping[closest_adept.tag] = shade.tag
-            except Exception as e:
-                print("Action 22", e)
 
         map = np.zeros(
             (self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
