@@ -2,7 +2,7 @@ from stable_baselines3 import A2C
 from sc2env import Sc2Env
 
 
-LOAD_MODEL = "data/models/janusmind/v0_3_1.zip"
+LOAD_MODEL = "data/models/janusmind/v0_3_2.zip"
 # Environment:
 env = Sc2Env(is_train = False)
 
