@@ -11,7 +11,7 @@ from stable_baselines3.common.sb2_compat.rmsprop_tf_like import RMSpropTFLike
 import wandb
 
 
-LOAD_MODEL = "data/models/janusmind/v0_3_1"
+LOAD_MODEL = "data/models/janusmind/v0_3_2"
 # Environment:
 env = Sc2Env(is_train = True)
 
@@ -24,7 +24,7 @@ models_dir = f"data/models/{model_name}/"
 logdir = f"data/logs/{model_name}/"
 
 
-conf_dict = {"Model": "v0.3.1",
+conf_dict = {"Model": "v0.3.2",
              "Machine": "Main",
              "policy":"MlpPolicy",
              "model_save_name": model_name, 
@@ -46,5 +46,5 @@ iters = 0
 while True:
 	print("On iteration: ", iters)
 	iters += 1
-	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/v0_3_1.zip")
+	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
+	model.save(f"{models_dir}/v0_3_2.zip")
