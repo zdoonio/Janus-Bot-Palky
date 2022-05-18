@@ -9,7 +9,7 @@ from sc2.ids.ability_id import AbilityId
 from sc2.unit import Unit
 from sc2.position import Point2
 import pickle
-import cv2
+#import cv2
 import math
 import numpy as np
 import time
@@ -734,13 +734,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # show map with opencv, resized to be larger:
         # horizontal flip:
 
-        cv2.imshow('map', cv2.flip(cv2.resize(map, None, fx=4,
-                   fy=4, interpolation=cv2.INTER_NEAREST), 0))
-        cv2.waitKey(1)
+        #cv2.imshow('map', cv2.flip(cv2.resize(map, None, fx=4,
+        #           fy=4, interpolation=cv2.INTER_NEAREST), 0))
+        #cv2.waitKey(1)
 
-        if self.SAVE_REPLAY:
+        #if self.SAVE_REPLAY:
             # save map image into "replays dir"
-            cv2.imwrite(f"replays/{int(time.time())}-{iteration}.png", map)
+            #cv2.imwrite(f"replays/{int(time.time())}-{iteration}.png", map)
 
         reward = 0
 
