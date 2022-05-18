@@ -218,7 +218,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         stalkers = self.units(UnitTypeId.STALKER)
         enemy_location = self.enemy_start_locations[0]
 
-        if self.structures(UnitTypeId.PYLON).ready and self.units(UnitTypeId.VOIDRAY).amount > 4:
+        if self.structures(UnitTypeId.PYLON).ready and self.units(UnitTypeId.STALKER).amount > 3:
             pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
             for stalker in stalkers:
                 if stalker.weapon_cooldown == 0:
@@ -505,7 +505,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack
         elif action == 18:
             try:
-                if self.units(UnitTypeId.VOIDRAY).amount < 8:
+                if self.units(UnitTypeId.ZEALOT).amount < 4:
                     self.flee_to_base(UnitTypeId.ZEALOT)
             except Exception as e:
                 print("Action 18", e)
