@@ -218,7 +218,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         stalkers = self.units(UnitTypeId.STALKER)
         enemy_location = self.enemy_start_locations[0]
 
-        if self.structures(UnitTypeId.PYLON).ready:
+        if self.structures(UnitTypeId.PYLON).ready and self.units(UnitTypeId.VOIDRAY).amount > 4:
             pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
             for stalker in stalkers:
                 if stalker.weapon_cooldown == 0:
@@ -446,15 +446,14 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 15:
             try:
-                if self.units(UnitTypeId.DARKTEMPLAR).amount > 2:
-                    for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
-                        targets = (self.enemy_units | self.enemy_structures).filter(
-                            lambda unit: unit.can_be_attacked)
-                        if targets:
-                            target = targets.closest_to(templar)
-                            templar.attack(target)
-                        else:
-                            self.do_random_attack(templar)                         
+                for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
+                    targets = (self.enemy_units | self.enemy_structures).filter(
+                        lambda unit: unit.can_be_attacked)
+                    if targets:
+                        target = targets.closest_to(templar)
+                        templar.attack(target)
+                    else:
+                        self.do_random_attack(templar)                         
 
             except Exception as e:
                 print("Action 15", e)
@@ -506,7 +505,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack
         elif action == 18:
             try:
-                self.flee_to_base(UnitTypeId.ZEALOT)
+                if self.units(UnitTypeId.VOIDRAY).amount < 8:
+                    self.flee_to_base(UnitTypeId.ZEALOT)
             except Exception as e:
                 print("Action 18", e)
 
