@@ -809,7 +809,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             print(
                 f"Iter: {iteration}. RWD: {reward}. Z: {self.units(UnitTypeId.ZEALOT).amount} S: {self.units(UnitTypeId.STALKER).amount} DT: {self.units(UnitTypeId.DARKTEMPLAR).amount} VR: {self.units(UnitTypeId.VOIDRAY).amount}")
 
-        save_map = np.resize(map, (224, 224, 3))
+        save_map = np.resize(map, (160, 160, 3))
 
         # write the file:
         data = {"state": save_map, "reward": reward, "action": None,
