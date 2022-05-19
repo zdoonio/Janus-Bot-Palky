@@ -22,4 +22,4 @@ if __name__ == '__main__':
         run_game(sc2.maps.get("BlackburnAIE"), [
             bot,
             Computer(Race.Zerg, Difficulty.Hard)
-        ], realtime=True)
+        ], realtime=False)

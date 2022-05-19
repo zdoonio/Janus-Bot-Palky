@@ -50,7 +50,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     def flee_to_ramp(self, unit_type: UnitTypeId):
         if self.units(unit_type).idle.amount > 0:
             for unit in self.units(unit_type):
-                unit.attack(self.main_base_ramp)            
+                unit.attack(self.main_base_ramp.protoss_wall_warpin)            
 
     def scout(self, curent_iteration: int):
         # are there any idle probes:
