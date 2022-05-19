@@ -15,7 +15,7 @@ class Sc2Env(gym.Env):
 		# Example when using discrete actions:
 		self.action_space = spaces.Discrete(22)
 		self.observation_space = spaces.Box(low=0, high=255,
-											shape=(224, 224, 3), dtype=np.uint8)
+											shape=(160, 160, 3), dtype=np.uint8)
 		self.is_train = is_train
 
 	def step(self, action):
@@ -60,16 +60,16 @@ class Sc2Env(gym.Env):
 
 			except Exception as e:
 				wait_for_state = True   
-				map = np.zeros((224, 224, 3), dtype=np.uint8)
+				map = np.zeros((160, 160, 3), dtype=np.uint8)
 				observation = map
-				data = {"state": map, "reward": 0, "action": 3, "done": False}  # empty action waiting for the next one!
+				data = {"state": map, "reward": 0, "action": 13, "done": False}  # empty action waiting for the next one!
 				with open('data/state_rwd_action.pkl', 'wb') as f:
 					pickle.dump(data, f)
 
 				state = map
 				reward = 0
 				done = False
-				action = 22
+				action = 13
 
 		info ={}
 		observation = state
@@ -77,7 +77,7 @@ class Sc2Env(gym.Env):
 
 
 	def reset(self):
-		map = np.zeros((224, 224, 3), dtype=np.uint8)
+		map = np.zeros((160, 160, 3), dtype=np.uint8)
 		observation = map
 		data = {"state": map, "reward": 0, "action": None, "done": False}  # empty action waiting for the next one!
 		with open('data/state_rwd_action.pkl', 'wb') as f:
@@ -89,3 +89,11 @@ class Sc2Env(gym.Env):
 			subprocess.Popen(['python', 'run_train.py'])
    
 		return observation  # reward, done, info can't be included
+
+	def observation(self):
+		map = np.zeros((160, 160, 3), dtype=np.uint8)
+		observation = map
+		data = {"state": map, "reward": 0, "action": 13, "done": False}  # empty action waiting for the next one!
+		with open('data/state_rwd_action.pkl', 'wb') as f:
+			pickle.dump(data, f)
+		return observation

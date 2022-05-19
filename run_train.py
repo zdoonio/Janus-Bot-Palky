@@ -20,6 +20,7 @@ result = run_game(  # run_game is a function that runs the game.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
+rwd = 0
 if result != None:
     if str(result) == "Result.Victory":
         rwd = 500
@@ -30,7 +31,7 @@ with open("data/results.txt","a") as f:
     f.write(f"{result}\n")
 
 
-map = np.zeros((224, 224, 3), dtype=np.uint8)
+map = np.zeros((160, 160, 3), dtype=np.uint8)
 observation = map
 data = {"state": map, "reward": rwd, "action": None, "done": True}  # empty action waiting for the next one!
 with open('data/state_rwd_action.pkl', 'wb') as f:

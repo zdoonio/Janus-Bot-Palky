@@ -38,7 +38,7 @@ env = Sc2Env(is_train = True)
 
 model = A2C('MlpPolicy', env, verbose=1, tensorboard_log=logdir, policy_kwargs=dict(optimizer_class=RMSpropTFLike, optimizer_kwargs=dict(eps=1e-5)))
 
-TIMESTEPS = 10
+TIMESTEPS = 10000
 iters = 0
 while True:
 	print("On iteration: ", iters)

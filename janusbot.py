@@ -162,12 +162,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     async def build_advanced_building(self, building_one: UnitTypeId, building_two: UnitTypeId, close_to_one: int, close_to_two: int, build_cybernetics: bool = True) -> None:
         # iterate thru all nexus and see if these buildings are close
         for nexus in self.townhalls:
+            random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(nexus)
             # is there is not a gateway close:
-            if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists:
+            if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists and random_nexus_pylon != None:
                 # if we can afford it:
                 if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
                     # build gateway
-                    await self.build(UnitTypeId.GATEWAY, near=nexus)
+                    await self.build(UnitTypeId.GATEWAY, near=random_nexus_pylon)
 
             # if the is not a cybernetics core close:
             if build_cybernetics:
@@ -183,11 +184,12 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 nexus, building_two, close_to_two)
 
     async def build_building_close_to_nexus(self, nexus: Unit, unit_type: UnitTypeId, close_to: int):
-        if not self.structures(unit_type).closer_than(close_to, nexus).exists:
+        random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(nexus)
+        if not self.structures(unit_type).closer_than(close_to, nexus).exists and random_nexus_pylon != None:
             # if we can afford it:
             if self.can_afford(unit_type) and self.already_pending(unit_type) == 0:
                 # build cybernetics core
-                await self.build(unit_type, near=nexus)
+                await self.build(unit_type, near=random_nexus_pylon)
 
     async def build_proxy_pylon(self, curent_iteration: int):
         # await self.chat_send("(probe)(pylon) building proxy pylon")
@@ -444,7 +446,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 if (self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready and self.can_afford(AbilityId.RESEARCH_CHARGE)):
                     council = self.structures(
                         UnitTypeId.TWILIGHTCOUNCIL).ready.first
-                    council.research(UpgradeId.RESEARCH_CHARGE)    
+                    council.research(AbilityId.RESEARCH_CHARGE)    
 
                 # Morph to warp gate when research is complete
                 for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
@@ -476,13 +478,14 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 14:
             try:
                 # just attack it didn't work yet
-                targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
-                #for nexus in self.structures(UnitTypeId.NEXUS):
-                #    self.is_attack = targets.closer_than(10, nexus)
-                for unit in self.units(UnitTypeId.ZEALOT):
-                    if(unit.is_idle):
-                        target = targets.closest_to(unit)
-                        unit.attack(target)
+                if self.enemy_units.exists:
+                    targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
+                    #for nexus in self.structures(UnitTypeId.NEXUS):
+                    #    self.is_attack = targets.closer_than(10, nexus)
+                    for unit in self.units(UnitTypeId.ZEALOT):
+                        if(unit.is_idle):
+                            target = targets.closest_to(unit)
+                            unit.attack(target)
                
             except Exception as e:
                 print("Action 14", e)
@@ -809,7 +812,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             print(
                 f"Iter: {iteration}. RWD: {reward}. Z: {self.units(UnitTypeId.ZEALOT).amount} S: {self.units(UnitTypeId.STALKER).amount} DT: {self.units(UnitTypeId.DARKTEMPLAR).amount} VR: {self.units(UnitTypeId.VOIDRAY).amount}")
 
-        save_map = np.resize(map, (224, 224, 3))
+        save_map = np.resize(map, (160, 160, 3))
 
         # write the file:
         data = {"state": save_map, "reward": reward, "action": None,
