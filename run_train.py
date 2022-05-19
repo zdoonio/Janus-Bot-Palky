@@ -30,7 +30,7 @@ with open("data/results.txt","a") as f:
     f.write(f"{result}\n")
 
 
-map = np.zeros((224, 224, 3), dtype=np.uint8)
+map = np.zeros((160, 160, 3), dtype=np.uint8)
 observation = map
 data = {"state": map, "reward": rwd, "action": None, "done": True}  # empty action waiting for the next one!
 with open('data/state_rwd_action.pkl', 'wb') as f:
