@@ -275,6 +275,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     stalker.move(pylon)
                 else:
                     stalker.move(pylon)
+                    
+        # probes defend itself            
+        probe_targets = (self.enemy_units).closer_than(5, self.start_location)
+        for unit in self.units(UnitTypeId.PROBE):
+            if(probe_targets.amount > 3):
+                target = probe_targets.closest_to(unit)
+                unit.attack(target)            
 
         action = state_rwd_action['action']
         # await BotAction.take_action(action, iteration) this block might be moved
