@@ -20,6 +20,7 @@ result = run_game(  # run_game is a function that runs the game.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 
+rwd = 0
 if result != None:
     if str(result) == "Result.Victory":
         rwd = 500

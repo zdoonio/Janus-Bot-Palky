@@ -1,5 +1,6 @@
 from stable_baselines3 import A2C
 from sc2env import Sc2Env
+from stable_baselines3.common.sb2_compat.rmsprop_tf_like import RMSpropTFLike 
 
 
 LOAD_MODEL = "data/models/janusmind/v0_3_2.zip"
@@ -7,7 +8,7 @@ LOAD_MODEL = "data/models/janusmind/v0_3_2.zip"
 env = Sc2Env(is_train = False)
 
 # load the model:
-model = A2C.load(LOAD_MODEL)
+model = A2C.load(LOAD_MODEL, env=env, policy_kwargs=dict(optimizer_class=RMSpropTFLike, optimizer_kwargs=dict(eps=1e-5)))
 
 
 # Play the game:
