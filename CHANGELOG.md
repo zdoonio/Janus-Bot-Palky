@@ -1,5 +1,5 @@
 # 17.05.2022 Version 0.3.1 released:
-- improve tactics 
+- improve tactics: stalker micro, zelatos move ramp
 - reduce model learning map
 # 14.05.2022 Version 0.3.0 released:
 - dark Templars Added
