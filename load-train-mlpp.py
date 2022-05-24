@@ -3,6 +3,7 @@
 # so this works, so far. 
 
 from stable_baselines3 import A2C
+from stable_baselines3 import PPO
 import os
 from sc2env import Sc2Env
 import time
@@ -16,7 +17,9 @@ LOAD_MODEL = "data/models/janusmind/v0_3_2"
 env = Sc2Env(is_train = True)
 
 # load the model:
-model = A2C.load(LOAD_MODEL, env=env, policy_kwargs=dict(optimizer_class=RMSpropTFLike, optimizer_kwargs=dict(eps=1e-5)))
+#model = A2C.load(LOAD_MODEL, env=env, policy_kwargs=dict(optimizer_class=RMSpropTFLike, optimizer_kwargs=dict(eps=1e-5)))
+
+model = PPO('MlpPolicy', env, verbose=1)
 
 model_name = f"janusmind"
 

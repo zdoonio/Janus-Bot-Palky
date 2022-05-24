@@ -518,7 +518,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 16:
             try:
                 if self.units(UnitTypeId.STALKER).amount > 3:
-                    self.siege = True
+                    self.siege = (self.enemy_structures).closer_than(20, self.enemy_start_locations[0]).exists
                     for stalker in self.units(UnitTypeId.STALKER).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
@@ -638,20 +638,6 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
             except Exception as e:
                 print("Action 20", e)
-
-        # 21: defend probes
-        elif action == 21:
-            try:
-                targets = (self.enemy_units).closer_than(5, self.start_location)
-                #for nexus in self.structures(UnitTypeId.NEXUS):
-                #    self.is_attack = targets.closer_than(10, nexus)
-                for unit in self.units(UnitTypeId.PROBE):
-                    if(targets.amount > 3):
-                        target = targets.closest_to(unit)
-                        unit.attack(target)
-                print("No action")
-            except Exception as e:
-                print("Action 21", e)
 
         map = np.zeros(
             (self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
