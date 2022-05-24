@@ -492,7 +492,10 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     for unit in self.units(UnitTypeId.ZEALOT):
                         if(unit.is_idle):
                             target = targets.closest_to(unit)
-                            unit.attack(target)
+                            if(target != None):
+                                unit.attack(target)
+                            else:     
+                                self.do_random_attack(unit)
                
             except Exception as e:
                 print("Action 14", e)
@@ -595,8 +598,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 location = self.enemy_structures.closer_than(
                     30, self.enemy_start_locations[0]).exists
 
-                # Make probes until we have 24 total
-                if self.supply_workers < 24 and nexus.is_idle:
+                # Make probes until we have 16 total
+                if self.supply_workers < 16 and nexus.is_idle:
                     if self.can_afford(UnitTypeId.PROBE):
                         nexus.train(UnitTypeId.PROBE)
 
