@@ -520,7 +520,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # Make stalkers attack either closest enemy unit or enemy spawn location
         elif action == 16:
             try:
-                if self.units(UnitTypeId.STALKER).amount > 3:
+                if self.units(UnitTypeId.STALKER).amount > 8:
                     self.siege = (self.enemy_structures).closer_than(20, self.enemy_start_locations[0]).exists
                     for stalker in self.units(UnitTypeId.STALKER).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
@@ -564,7 +564,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack
         elif action == 18:
             try:
-                if self.units(UnitTypeId.ZEALOT).amount < 6:
+                if self.units(UnitTypeId.ZEALOT).amount < 12:
                     self.flee_to_ramp(UnitTypeId.ZEALOT)
             except Exception as e:
                 print("Action 18", e)
