@@ -547,7 +547,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         # 11: cannon rush
         # TODO: maybe do more complex tactics for cannon rush
-        elif action == 11:
+        elif action == 11 and self.current_tactic == 4:
             try:
                 self.last_proxy
             except:
