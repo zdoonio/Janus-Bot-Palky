@@ -252,6 +252,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     async def on_step(self, iteration: int):
         if iteration == 0:
             self.choose_tactic()
+            # print(self.current_tactic)
             if self.current_tactic == 1:
                 await self.chat_send("stalker rush")
             elif self.current_tactic == 2:
@@ -351,7 +352,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # 1: build base
         elif action == 1:
             try:
-                if self.current_tactic == 1 or self.current_tactic == 2:
+                if self.current_tactic == 1:
+                    await self.build_advanced_building(UnitTypeId.GATEWAY, UnitTypeId.CYBERNETICSCORE, 15, 100)
                     await self.build_more_gates()
                 if self.current_tactic == 2:    
                     await self.build_advanced_building(UnitTypeId.TWILIGHTCOUNCIL, UnitTypeId.DARKSHRINE, 100, 100)
