@@ -76,7 +76,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             self.last_sent = 0
 
         # if self.last_sent doesnt exist yet:
-        if (curent_iteration - self.last_sent) > 400:
+        if (curent_iteration - self.last_sent) > 250:
             try:
                 if self.units(UnitTypeId.PROBE).idle.exists:
                     # pick one of these randomly:
