@@ -26,6 +26,22 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     total_steps = 10000
     steps_for_pun = np.linspace(0, 1, total_steps)
     step_punishment = ((np.exp(steps_for_pun**3) / 10) - 0.1) * 10
+    current_tactic = 0
+    
+    # bot can use multiple tactics to perform win:
+    # 1: Stalker Run
+    # 2: DT Rush
+    # 3: Void rays
+    # 4: Cannon rush
+    def choose_tactic(self): 
+        enemy_race = self.enemy_race
+        # if terran choose Stalker, DT Rush
+        if enemy_race == 1:
+            self.current_tactic = random.randrange(1, 2)
+        else:
+            self.current_tactic = random.randrange(1, 4)
+                 
+        
 
     def do_random_attack(self, unit: Unit):
         invisible_enemy_start_locations = [
@@ -235,14 +251,27 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     # on_step is a method that is called every step of the game.
     async def on_step(self, iteration: int):
         if iteration == 0:
+            self.choose_tactic()
+            if self.current_tactic == 1:
+                await self.chat_send("stalker rush")
+            elif self.current_tactic == 2:
+                await self.chat_send("dt rush")
+            elif self.current_tactic == 3:
+                await self.chat_send("void rays push") 
+            elif self.current_tactic == 4:
+                await self.chat_send("cannon rush")             
             await self.chat_send("(glhf)")
+            
+        # stops cannon rush to not use them forever    
+        if iteration % 10000 == 0 and self.current_tactic == 4:
+            self.current_tactic = self.current_tactic = random.randrange(1, 3)
 
         if not any(self.townhalls):
             # surrender
-            #await self.client.chat_send('(gg)', False)
-            #await self.client.quit()
-            for unit in self.units:
-                self.do_random_attack(unit)
+            await self.client.chat_send('(gg)', False)
+            await self.client.quit()
+            #for unit in self.units:
+                #self.do_random_attack(unit)
 
         no_action = True
 
@@ -307,7 +336,6 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         18: zealots flee (back to base)
         19: voidray flee (back to base)
         20: cannon rush
-        21: defend probes
         TODO: flee probes when attacked
         TODO: if enemy being aggresive build oracle 
         TODO: attack oracle
@@ -320,116 +348,75 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             except Exception as e:
                 print(e)
 
-        # 1: build stargate (or up to one) (evenly)
+        # 1: build base
         elif action == 1:
             try:
-                await self.build_advanced_building(UnitTypeId.STARGATE, UnitTypeId.STARGATE, 100, 20, build_cybernetics=True)
+                if self.current_tactic == 1 or self.current_tactic == 2:
+                    await self.build_more_gates()
+                if self.current_tactic == 2:    
+                    await self.build_advanced_building(UnitTypeId.TWILIGHTCOUNCIL, UnitTypeId.DARKSHRINE, 100, 100)
+                if self.current_tactic == 3:        
+                    await self.build_advanced_building(UnitTypeId.STARGATE, UnitTypeId.STARGATE, 100, 20, build_cybernetics=True)
+                if self.current_tactic == 3 or self.current_tactic == 4:
+                    await self.build_advanced_building(UnitTypeId.FORGE, UnitTypeId.PHOTONCANNON, 100, 15)
             except Exception as e:
                 print("Action 1", e)
-
-        # 2: build proxy pylon
-        elif action == 2:
+    
+        # 2: build proxy
+        elif action == 2 and (self.current_tactic == 1 or self.current_tactic == 2):
             try:
                 await self.build_proxy_pylon(iteration)
             except Exception as e:
                 print("Action 2", e)
+                
 
-        # 3: build more gates
-        elif action == 3:
-            try:
-                await self.build_more_gates()
-            except Exception as e:
-                print("Action 3", e)
-
-        # 4: build dark shrine
-        elif action == 4:
-            try:
-                await self.build_advanced_building(UnitTypeId.TWILIGHTCOUNCIL, UnitTypeId.DARKSHRINE, 100, 100)
-            except Exception as e:
-                print("Action 4", e)
-
-        # 5: build defences eg. photon cannon
-        elif action == 5:
-            try:
-                await self.build_advanced_building(UnitTypeId.FORGE, UnitTypeId.PHOTONCANNON, 100, 15)
-            except Exception as e:
-                print("Action 5", e)
-
-        # 6: train zealtos
-        elif action == 6:
+        # 3: train units in base
+        elif action == 3 and self.current_tactic != 1:
             try:
                 self.train_troop_in_building(
                     UnitTypeId.GATEWAY, UnitTypeId.ZEALOT)
-            except Exception as e:
-                print("Action 6", e)
-
-        # 7: train voidray (evenly)
-        elif action == 7:
-            try:
                 self.train_troop_in_building(
                     UnitTypeId.STARGATE, UnitTypeId.VOIDRAY)
             except Exception as e:
-                print("Action 7", e)
+                print("Action 3", e)
 
-        # 8: train zealots in warp gate
-        elif action == 8:
+        # 4: train units in warp gate
+        elif action == 4 and self.current_tactic != 4:
             try:
                 targets = (self.enemy_units).filter(
                     lambda unit: unit.can_be_attacked)
+                if self.current_tactic == 1:
+                    self.abilityId = AbilityId.WARPGATETRAIN_STALKER
+                    self.unitTypeId = UnitTypeId.STALKER
+                elif self.current_tactic == 2:
+                    self.abilityId = AbilityId.WARPGATETRAIN_DARKTEMPLAR
+                    self.unitTypeId = UnitTypeId.DARKTEMPLAR
+                elif self.current_tactic == 3:
+                    self.abilityId = AbilityId.WARPGATETRAIN_ZEALOT
+                    self.unitTypeId = UnitTypeId.ZEALOT 
+                         
                 if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
                     proxy = self.structures(UnitTypeId.PYLON).closest_to(
                         self.enemy_start_locations[0])
-                    await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, proxy)
+                    await self.warp_new_units(self.abilityId, self.unitTypeId, proxy)
                 elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_location).exists:
                     random_nexus_pylon = self.structures(
                         UnitTypeId.PYLON).closest_to(self.townhalls.random)
-                    await self.warp_new_units(AbilityId.WARPGATETRAIN_ZEALOT, UnitTypeId.ZEALOT, random_nexus_pylon)
+                    await self.warp_new_units(self.abilityId, self.unitTypeId, random_nexus_pylon)
             except Exception as e:
-                print("Action 8", e)
+                print("Action 4", e)
 
-        # 9: train stalkers in warp gate
-        elif action == 9:
-            try:
-                targets = (self.enemy_units).filter(
-                    lambda unit: unit.can_be_attacked)
-                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
-                    proxy = self.structures(UnitTypeId.PYLON).closest_to(
-                        self.enemy_start_locations[0])
-                    await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_location).exists:
-                    random_nexus_pylon = self.structures(
-                        UnitTypeId.PYLON).closest_to(self.townhalls.random)
-                    await self.warp_new_units(AbilityId.WARPGATETRAIN_STALKER, UnitTypeId.STALKER, random_nexus_pylon)
-            except Exception as e:
-                print("Action 9", e)
-
-        # 10: train dark templars in warp gate
-        elif action == 10:
-            try:
-                targets = (self.enemy_units).filter(
-                    lambda unit: unit.can_be_attacked)
-                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
-                    proxy = self.structures(UnitTypeId.PYLON).closest_to(
-                        self.enemy_start_locations[0])
-                    await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_location).exists:
-                    random_nexus_pylon = self.structures(
-                        UnitTypeId.PYLON).closest_to(self.townhalls.random)
-                    await self.warp_new_units(AbilityId.WARPGATETRAIN_DARKTEMPLAR, UnitTypeId.DARKTEMPLAR, random_nexus_pylon)
-            except Exception as e:
-                print("Action 10", e)
-
-        # 11: send scout (evenly/random/closest to enemy?)
-        elif action == 11:
+        # 5: send scout (evenly/random/closest to enemy?)
+        elif action == 5:
             try:
                 self.scout(curent_iteration=iteration)
             except Exception as e:
-                print("Action 11", e)
+                print("Action 5", e)
 
-        # 12: do upgrades,
+        # 6: do upgrades,
         # now it is simple version just do level one upgrades
         # TODO: add multiple upgrades and calculate costs
-        elif action == 12:
+        elif action == 6:
             try:
                 for forge in self.structures(UnitTypeId.FORGE).ready.idle:
                     if self.can_afford(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1):
@@ -461,10 +448,10 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                         gateway(AbilityId.MORPH_WARPGATE)
 
             except Exception as e:
-                print("Action 12", e)
+                print("Action 6", e)
 
-        # 13: chronoboost nexus or cybernetics core
-        elif action == 13:
+        # 7: chronoboost nexus or cybernetics core
+        elif action == 7:
             try:
                 for nexus in self.structures(UnitTypeId.NEXUS):
                     if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
@@ -478,11 +465,11 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                             if nexus.energy >= 50:
                                 nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
             except Exception as e:
-                print("Action 13", e)
+                print("Action 7", e)
 
-        # 14: defend attack try to use zealots
+        # 8: defend attack try to use zealots
         # TODO: more defensive tactics
-        elif action == 14:
+        elif action == 8:
             try:
                 # just attack it didn't work yet
                 if self.enemy_units.exists:
@@ -498,11 +485,10 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                                 self.do_random_attack(unit)
                
             except Exception as e:
-                print("Action 14", e)
+                print("Action 8", e)
 
-        # 15: attack dark templars
-        # Make stalkers attack either closest enemy unit or enemy spawn location
-        elif action == 15:
+        # 9: attack base
+        elif action == 9:
             try:
                 for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
                     targets = (self.enemy_units | self.enemy_structures).filter(
@@ -511,15 +497,9 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                         target = targets.closest_to(templar)
                         templar.attack(target)
                     else:
-                        self.do_random_attack(templar)                         
-
-            except Exception as e:
-                print("Action 15", e)
-
-        # 16: attack stalker units
-        # Make stalkers attack either closest enemy unit or enemy spawn location
-        elif action == 16:
-            try:
+                        self.do_random_attack(templar)     
+                        
+                # attack stalker units, Make stalkers attack either closest enemy unit or enemy spawn location        
                 if self.units(UnitTypeId.STALKER).amount > 8:
                     self.siege = (self.enemy_structures).closer_than(20, self.enemy_start_locations[0]).exists
                     for stalker in self.units(UnitTypeId.STALKER).ready.idle:
@@ -529,14 +509,9 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                             target = targets.closest_to(stalker)
                             stalker.attack(target)
                         else:
-                            self.do_random_attack(stalker)
-
-            except Exception as e:
-                print("Action 16", e)
-
-        # 17: attack voidray (known buildings, units, then enemy base, just go in logical order.)
-        elif action == 17:
-            try:
+                            self.do_random_attack(stalker)  
+                            
+                # attack voidray (known buildings, units, then enemy base, just go in logical order.)            
                 targets = (self.enemy_units).filter(
                     lambda unit: unit.can_be_attacked)
                 if targets.closer_than(20, self.start_location):
@@ -546,7 +521,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 # If we have at least 5 void rays, attack closes enemy unit/building, or if none is visible: attack move towards enemy spawn
                 elif self.units(UnitTypeId.VOIDRAY).amount > 5:
                     for voidray in self.units(UnitTypeId.VOIDRAY):
-                        # Activate charge ability if the void ray just attacked
+                        # Activate prismatic ability if the void ray just attacked
                         if voidray.weapon_cooldown > 0:
                             voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
                         # Choose target and attack, filter out invisible targets
@@ -555,31 +530,24 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                             target = targets.closest_to(voidray)
                             voidray.attack(target)
                         else:
-                            self.do_random_attack(voidray)
+                            self.do_random_attack(voidray)                                      
 
             except Exception as e:
-                print("Action 17", e)
+                print("Action 9", e)
 
-        # 18: zealots flee
+        # 10: unit flee
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack
-        elif action == 18:
+        elif action == 10:
             try:
+                self.flee_to_base(UnitTypeId.VOIDRAY)
                 if self.units(UnitTypeId.ZEALOT).amount < 12:
                     self.flee_to_ramp(UnitTypeId.ZEALOT)
             except Exception as e:
-                print("Action 18", e)
+                print("Action 10", e)
 
-        # 19: voidray flee
-        # TODO: think about more complex algorythm for flee for eg. count chances to being attack
-        elif action == 19:
-            try:
-                self.flee_to_base(UnitTypeId.VOIDRAY)
-            except Exception as e:
-                print("Action 19", e)
-
-        # 20: cannon rush
+        # 11: cannon rush
         # TODO: maybe do more complex tactics for cannon rush
-        elif action == 20:
+        elif action == 11:
             try:
                 self.last_proxy
             except:
@@ -640,7 +608,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                         await self.build(building, near=pos)
 
             except Exception as e:
-                print("Action 20", e)
+                print("Action 11", e)
 
         map = np.zeros(
             (self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
@@ -791,7 +759,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                         reward += 0.01
                         attack_count += 1
 
-            # iterate through our zealots:
+            # iterate through our dark templars:
             for templar in self.units(UnitTypeId.DARKTEMPLAR):
                 # if voidray is attacking and is in range of enemy unit:
                 if templar.is_attacking and templar.target_in_range:
