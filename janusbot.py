@@ -503,7 +503,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                         
                 # attack stalker units, Make stalkers attack either closest enemy unit or enemy spawn location        
                 if self.units(UnitTypeId.STALKER).amount > 8:
-                    self.siege = (self.enemy_structures).closer_than(20, self.enemy_start_locations[0]).exists
+                    self.siege = (self.enemy_structures).closer_than(25, self.enemy_start_locations[0]).exists
                     for stalker in self.units(UnitTypeId.STALKER).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
