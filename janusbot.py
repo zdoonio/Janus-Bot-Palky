@@ -180,7 +180,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         for nexus in self.townhalls:
             random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(nexus)
             # is there is not a gateway close:
-            if not self.structures(UnitTypeId.GATEWAY).closer_than(10, nexus).exists and random_nexus_pylon != None:
+            if not self.structures(UnitTypeId.GATEWAY).closer_than(15, nexus).exists and random_nexus_pylon != None:
                 # if we can afford it:
                 if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
                     # build gateway
@@ -357,8 +357,9 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     await self.build_more_gates()
                 if self.current_tactic == 2:    
                     await self.build_advanced_building(UnitTypeId.TWILIGHTCOUNCIL, UnitTypeId.DARKSHRINE, 100, 100)
+                    await self.build_more_gates()
                 if self.current_tactic == 3:        
-                    await self.build_advanced_building(UnitTypeId.STARGATE, UnitTypeId.STARGATE, 100, 20, build_cybernetics=True)
+                    await self.build_advanced_building(UnitTypeId.STARGATE, UnitTypeId.STARGATE, 20, 20, build_cybernetics=True)
                 if self.current_tactic == 3 or self.current_tactic == 4:
                     await self.build_advanced_building(UnitTypeId.FORGE, UnitTypeId.PHOTONCANNON, 100, 15)
             except Exception as e:
