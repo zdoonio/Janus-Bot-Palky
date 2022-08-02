@@ -208,7 +208,6 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 await self.build(unit_type, near=random_nexus_pylon)
 
     async def build_proxy_pylon(self, curent_iteration: int):
-        # await self.chat_send("(probe)(pylon) building proxy pylon")
         try:
             self.last_proxy
         except:
@@ -219,6 +218,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)) and (curent_iteration - self.last_sent) > 200:
             await self.build(UnitTypeId.PYLON, near=point)
+            await self.chat_send("(probe)(pylon) building proxy pylon")
             self.proxy_built = True
 
         if(not self.structures(UnitTypeId.PYLON).closer_than(20, point).exists):
@@ -269,8 +269,8 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         if not any(self.townhalls):
             # surrender
-            #await self.client.chat_send('(gg)', False)
-            #await self.client.quit()
+            await self.client.chat_send('(gg)', False)
+            await self.client.leave()
             for unit in self.units:
                 self.do_random_attack(unit)
 
