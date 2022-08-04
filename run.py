@@ -19,7 +19,7 @@ if __name__ == '__main__':
     else:
         # Local game
         print("Starting local game...")
-        run_game(sc2.maps.get("BlackburnAIE"), [
+        run_game(sc2.maps.get("sc2-ai-cup-2022"), [
             bot,
             Computer(Race.Zerg, Difficulty.Hard)
         ], realtime=True)

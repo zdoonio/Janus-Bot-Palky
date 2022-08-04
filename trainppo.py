@@ -19,7 +19,7 @@ conf_dict = {"Model": "v0.4.0",
 
 
 run = wandb.init(
-    project=f'JanusBot',
+    project=f'JanusBotPalky',
     entity="zdoonio",
     config=conf_dict,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
@@ -43,4 +43,4 @@ while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-	model.save(f"{models_dir}/v0_4_0.zip")
+	model.save(f"{models_dir}/v0_4_0_palky.zip")
