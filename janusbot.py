@@ -1,5 +1,7 @@
 import random
 from typing import List
+from typing import Set
+from typing import FrozenSet
 from loguru import logger
 from sc2.bot_ai import BotAI  # parent class we inherit from
 from sc2.ids.unit_typeid import UnitTypeId
@@ -7,6 +9,7 @@ from sc2.ids.upgrade_id import UpgradeId
 from sc2.ids.buff_id import BuffId
 from sc2.ids.ability_id import AbilityId
 from sc2.unit import Unit
+from sc2.units import Units
 from sc2.position import Point2
 import pickle
 #import cv2
@@ -101,7 +104,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         if not found_something:
 
             for cc in self.townhalls:
-                # get worker count for this nexus:
+                # get worker count for this cc:
                 worker_count = len(self.workers.closer_than(10, cc))
                 if worker_count < 22:  # 16+3+3
                     if cc.is_idle and self.can_afford(UnitTypeId.SCV):
@@ -110,12 +113,12 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
                 # have we built enough assimilators?
                 # find vespene geysers
-                for geyser in self.vespene_geyser.closer_than(10, nexus):
+                for geyser in self.vespene_geyser.closer_than(10, cc):
                     # build assimilator if there isn't one already:
-                    if not self.can_afford(UnitTypeId.RAFINERY):
+                    if not self.can_afford(UnitTypeId.REFINERY):
                         break
-                    if not self.structures(UnitTypeId.RAFINERY).closer_than(2.0, geyser).exists:
-                        await self.build(UnitTypeId.RAFINERY, geyser)
+                    if not self.structures(UnitTypeId.REFINERY).closer_than(2.0, geyser).exists:
+                        await self.build(UnitTypeId.REFINERY, geyser)
                         found_something = True
 
             if not found_something:
@@ -329,6 +332,15 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                     break        
                 
         # Build wall
+        depot_placement_positions: FrozenSet[Point2] = self.main_base_ramp.corner_depots
+        # Uncomment the following if you want to build 3 supply depots in the wall instead of a barracks in the middle + 2 depots in the corner
+        # depot_placement_positions = self.main_base_ramp.corner_depots | {self.main_base_ramp.depot_in_middle}
+
+        barracks_placement_position: Point2 = self.main_base_ramp.barracks_correct_placement
+        # If you prefer to have the barracks in the middle without room for addons, use the following instead
+        # barracks_placement_position = self.main_base_ramp.barracks_in_middle
+
+        depots: Units = self.structures.of_type({UnitTypeId.SUPPLYDEPOT, UnitTypeId.SUPPLYDEPOTLOWERED})
         if self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0:
             if len(depot_placement_positions) == 0:
                 return
@@ -382,7 +394,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 3:
             try:
                 self.train_troop_in_building(
-                    UnitTypeId.BARRACKS, UnitTypeId.MARRINE)
+                    UnitTypeId.BARRACKS, UnitTypeId.MARINE)
                 self.train_troop_in_building(
                     UnitTypeId.BARRACKS, UnitTypeId.REAPER)
             except Exception as e:

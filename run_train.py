@@ -15,8 +15,8 @@ from torch import true_divide
 
 result = run_game(  # run_game is a function that runs the game.
     maps.get("sc2-ai-cup-2022"), # the map we are playing on
-    [Bot(Race.Protoss, JanusBot()), # runs our coded bot, protoss race, and we pass our bot object 
-     Computer(Race.Random, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
+    [Bot(Race.Terran, JanusBot()), # runs our coded bot, protoss race, and we pass our bot object 
+     Computer(Race.Terran, Difficulty.MediumHard)], # runs a pre-made computer agent, zerg race, with a hard difficulty.
     realtime=False, # When set to True, the agent is limited in how long each step can take to process.
 )
 

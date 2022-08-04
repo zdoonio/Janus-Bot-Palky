@@ -6,7 +6,7 @@ from sc2.player import Bot, Computer
 from sc2.main import run_game
 
 from janusbot import JanusBot
-bot = Bot(Race.Protoss, JanusBot(), 'JanusBot')
+bot = Bot(Race.Terran, JanusBot(), 'JanusBotPalky')
 
 # Start game
 if __name__ == '__main__':
