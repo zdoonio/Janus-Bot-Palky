@@ -29,20 +29,12 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
     current_tactic = 0
     
     # bot can use multiple tactics to perform win:
-    # 1: Stalker Run
-    # 2: DT Rush
-    # 3: Void rays
-    # 4: Cannon rush
+    # 1: Reaper rush
+    # 2: Proxy Barracks
     def choose_tactic(self): 
-        enemy_race = self.enemy_race
-        # if terran choose Stalker, DT Rush
-        if enemy_race == 1:
-            self.current_tactic = random.randrange(1, 2)
-        else:
-            self.current_tactic = random.randrange(1, 4)
+        self.current_tactic = random.randrange(1, 2)
                  
         
-
     def do_random_attack(self, unit: Unit):
         invisible_enemy_start_locations = [
             p for p in self.enemy_start_locations if not self.is_visible(p)]
@@ -78,13 +70,13 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         # if self.last_sent doesnt exist yet:
         if (curent_iteration - self.last_sent) > 250:
             try:
-                if self.units(UnitTypeId.PROBE).idle.exists:
+                if self.units(UnitTypeId.SCV).idle.exists:
                     # pick one of these randomly:
-                    probe = random.choice(self.units(UnitTypeId.PROBE).idle)
-                    self.do_random_attack(probe)
+                    scv = random.choice(self.units(UnitTypeId.SCV).idle)
+                    self.do_random_attack(scv)
                 else:
-                    probe = random.choice(self.units(UnitTypeId.PROBE))
-                    self.do_random_attack(probe)
+                    scv = random.choice(self.units(UnitTypeId.SCV))
+                    self.do_random_attack(scv)
                     # send probe towards enemy base:
 
                 self.last_sent = curent_iteration
@@ -92,122 +84,52 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                 pass
 
     def train_troop_in_building(self, building_type: UnitTypeId, troop_type: UnitTypeId) -> None:
-        # might amount of each unit should be limited ? and self.units(UnitTypeId.ZEALOT).amount < 16
         if self.can_afford(troop_type):
-            for gate in self.structures(building_type).ready.idle:
+            for rax in self.structures(building_type).ready.idle:
                 if self.can_afford(troop_type):
-                    gate.train(troop_type)
-
-    def train_voidray(self) -> None:
-        if self.can_afford(UnitTypeId.VOIDRAY) and self.units(UnitTypeId.VOIDRAY).amount < 12:
-            for sg in self.structures(UnitTypeId.STARGATE).ready.idle:
-                if self.can_afford(UnitTypeId.VOIDRAY):
-                    sg.train(UnitTypeId.VOIDRAY)
-                    
-    #TODO: make it use in future versions                
-    def find_adepts_shades(self) -> None:
-        adepts = self.units(UnitTypeId.ADEPT)
-        if adepts and not self.shaded:
-            # Wait for adepts to spawn and then cast ability
-            for adept in adepts:
-                adept(AbilityId.ADEPTPHASESHIFT_ADEPTPHASESHIFT, self._game_info.map_center)
-                self.shaded = True
-                if self.shades_mapping:
-                    # Debug log and draw a line between the two units
-                    for adept_tag, shade_tag in self.shades_mapping.items():
-                        adept = self.units.find_by_tag(adept_tag)
-                        shade = self.units.find_by_tag(shade_tag)
-                        if shade:
-                            logger.info(
-                                f"Remaining shade time: {shade.buff_duration_remain} / {shade.buff_duration_max}")
-                        if adept and shade:
-                            self.client.debug_line_out(
-                                adept, shade, (0, 255, 0))
-                    logger.info(self.shades_mapping)
-                elif self.shaded:
-                    # Find shades
-                    shades = self.units(UnitTypeId.ADEPTPHASESHIFT)
-                    for shade in shades:
-                        remaining_adepts = adepts.tags_not_in(
-                            self.shades_mapping)
-                        # Figure out where the shade should have been "self.client.game_step"-frames ago
-                        forward_position = Point2(
-                            (shade.position.x + math.cos(shade.facing),
-                             shade.position.y + math.sin(shade.facing))
-                        )
-                        previous_shade_location = shade.position.towards(forward_position, -
-                            (self.client.game_step / 16) * shade.movement_speed
-                        )  # See docstring of movement_speed attribute
-                        closest_adept = remaining_adepts.closest_to(
-                            previous_shade_location)
-                        self.shades_mapping[closest_adept.tag] = shade.tag                
+                    rax.train(troop_type)   
 
     async def expand(self) -> None:
         found_something = False
         if self.supply_left < 4:
             # build pylons.
-            if self.already_pending(UnitTypeId.PYLON) == 0:
-                if self.can_afford(UnitTypeId.PYLON):
-                    await self.build(UnitTypeId.PYLON, near=random.choice(self.townhalls))
+            if self.already_pending(UnitTypeId.SCV) == 0:
+                if self.can_afford(UnitTypeId.SCV):
+                    await self.build(UnitTypeId.SCV, near=random.choice(self.townhalls))
                     found_something = True
 
         if not found_something:
 
-            for nexus in self.townhalls:
+            for cc in self.townhalls:
                 # get worker count for this nexus:
-                worker_count = len(self.workers.closer_than(10, nexus))
+                worker_count = len(self.workers.closer_than(10, cc))
                 if worker_count < 22:  # 16+3+3
-                    if nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
-                        nexus.train(UnitTypeId.PROBE)
+                    if cc.is_idle and self.can_afford(UnitTypeId.SCV):
+                        cc.train(UnitTypeId.SCV)
                         found_something = True
 
                 # have we built enough assimilators?
                 # find vespene geysers
                 for geyser in self.vespene_geyser.closer_than(10, nexus):
                     # build assimilator if there isn't one already:
-                    if not self.can_afford(UnitTypeId.ASSIMILATOR):
+                    if not self.can_afford(UnitTypeId.RAFINERY):
                         break
-                    if not self.structures(UnitTypeId.ASSIMILATOR).closer_than(2.0, geyser).exists:
-                        await self.build(UnitTypeId.ASSIMILATOR, geyser)
+                    if not self.structures(UnitTypeId.RAFINERY).closer_than(2.0, geyser).exists:
+                        await self.build(UnitTypeId.RAFINERY, geyser)
                         found_something = True
 
             if not found_something:
-                if self.already_pending(UnitTypeId.NEXUS) == 0 and self.can_afford(UnitTypeId.NEXUS):
+                if self.already_pending(UnitTypeId.COMMANDCENTER) == 0 and self.can_afford(UnitTypeId.COMMANDCENTER):
                     await self.expand_now()
 
-    async def build_advanced_building(self, building_one: UnitTypeId, building_two: UnitTypeId, close_to_one: int, close_to_two: int, build_cybernetics: bool = True) -> None:
-        # iterate thru all nexus and see if these buildings are close
-        for nexus in self.townhalls:
-            random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(nexus)
-            # is there is not a gateway close:
-            if not self.structures(UnitTypeId.GATEWAY).closer_than(15, nexus).exists and random_nexus_pylon != None:
-                # if we can afford it:
-                if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
-                    # build gateway
-                    await self.build(UnitTypeId.GATEWAY, near=random_nexus_pylon)
-
-            # if the is not a cybernetics core close:
-            if build_cybernetics:
-                await self.build_building_close_to_nexus(
-                    nexus, UnitTypeId.CYBERNETICSCORE, 100)
-
-            # build advanced building one:
-            await self.build_building_close_to_nexus(
-                nexus, building_one, close_to_one)
-
-            # build advanced building two:
-            await self.build_building_close_to_nexus(
-                nexus, building_two, close_to_two)
-
-    async def build_building_close_to_nexus(self, nexus: Unit, unit_type: UnitTypeId, close_to: int):
-        random_nexus_pylon = self.structures(UnitTypeId.PYLON).closest_to(nexus)
-        if not self.structures(unit_type).closer_than(close_to, nexus).exists and random_nexus_pylon != None:
+    async def build_building_close_to_cc(self, cc: Unit, unit_type: UnitTypeId, close_to: int):
+        if not self.structures(unit_type).closer_than(close_to, cc).exists:
             # if we can afford it:
             if self.can_afford(unit_type) and self.already_pending(unit_type) == 0:
                 # build cybernetics core
-                await self.build(unit_type, near=random_nexus_pylon)
+                await self.build(unit_type, near=cc)
 
-    async def build_proxy_pylon(self, curent_iteration: int):
+    async def build_proxy_rax(self, curent_iteration: int):
         try:
             self.last_proxy
         except:
@@ -216,37 +138,19 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         point = self.game_info.map_center.towards(
             self.enemy_start_locations[0], 20)
 
-        if (self.structures(UnitTypeId.CYBERNETICSCORE).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.PYLON)) and (curent_iteration - self.last_sent) > 200:
-            await self.build(UnitTypeId.PYLON, near=point)
-            await self.chat_send("(probe)(pylon) building proxy pylon")
+        if (self.structures(UnitTypeId.SUPPLYDEPOT).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.BARRACKS)) and (curent_iteration - self.last_sent) > 200:
+            await self.build(UnitTypeId.BARRACKS, near=point)
+            await self.chat_send("building proxy rax")
             self.proxy_built = True
 
-        if(not self.structures(UnitTypeId.PYLON).closer_than(20, point).exists):
+        if(not self.structures(UnitTypeId.BARRACKS).closer_than(20, point).exists):
             self.proxy_built = False
 
-    async def build_more_gates(self):
-        if self.structures(UnitTypeId.PYLON).exists:
-            pylon = self.structures(UnitTypeId.PYLON).ready
-            # If we have no cyber core, build one
-            if not self.structures(UnitTypeId.CYBERNETICSCORE):
-                if (self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0):
-                    await self.build(UnitTypeId.CYBERNETICSCORE, near=pylon)
-            # Build up to 2 gates
-            if (self.can_afford(UnitTypeId.GATEWAY) and self.structures(UnitTypeId.WARPGATE).amount + self.structures(UnitTypeId.GATEWAY).amount < 2):
-                await self.build(UnitTypeId.GATEWAY, near=pylon)
-
-    async def warp_new_units(self, ability: AbilityId, unit_type: UnitTypeId, proxy: Unit) -> None:
-        for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
-            abilities = await self.get_available_abilities(warpgate)
-            # all the units have the same cooldown anyway so let's just look at ZEALOT
-            if ability in abilities:
-                pos = proxy.position.to2.random_on_distance(4)
-                placement = await self.find_placement(ability, pos, placement_step=1)
-                if placement is None:
-                    # return ActionResult.CantFindPlacementLocation
-                    print("can't place")
-                    return
-                warpgate.warp_in(unit_type, placement)
+    async def build_more_rax(self):
+        if self.structures(UnitTypeId.SUPPLYDEPOT).exists:
+            # Build up to 2 rax
+            if (self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount + self.structures(UnitTypeId.BARRACKS).amount < 2):
+                await self.build(UnitTypeId.BARRACKS, near=self.start_location)
 
     # on_step is a method that is called every step of the game.
     async def on_step(self, iteration: int):
@@ -254,13 +158,9 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             self.choose_tactic()
             # print(self.current_tactic)
             if self.current_tactic == 1:
-                await self.chat_send("stalker rush")
+                await self.chat_send("reaper rush")
             elif self.current_tactic == 2:
-                await self.chat_send("dt rush")
-            elif self.current_tactic == 3:
-                await self.chat_send("void rays push") 
-            elif self.current_tactic == 4:
-                await self.chat_send("cannon rush")             
+                await self.chat_send("proxy barracks")   
             await self.chat_send("(glhf)")
             
         # stops cannon rush to not use them forever    
@@ -292,54 +192,167 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         await self.distribute_workers()  # put idle workers back to work
         
-        # stalkers micro
-        stalkers = self.units(UnitTypeId.STALKER)
+        # marine micro
+        marines = self.units(UnitTypeId.MARINE)
         enemy_location = self.enemy_start_locations[0]
 
-        if self.structures(UnitTypeId.PYLON).ready and self.siege:
-            pylon = self.structures(UnitTypeId.PYLON).closest_to(enemy_location)
-            for stalker in stalkers:
-                if stalker.weapon_cooldown == 0:
-                    stalker.attack(enemy_location)
-                elif stalker.weapon_cooldown < 0:
-                    stalker.move(pylon)
+        if self.structures(UnitTypeId.BARRACKS).ready and self.siege:
+            rax = self.structures(UnitTypeId.BARRACKS).closest_to(enemy_location)
+            for marine in marines:
+                if marine.weapon_cooldown == 0:
+                    marine.attack(enemy_location)
+                elif marine.weapon_cooldown < 0:
+                    marine.move(rax)
                 else:
-                    stalker.move(pylon)
+                    marine.move(rax)
                     
-        # probes defend itself            
+        # Reaper micro
+        enemies: Units = self.enemy_units | self.enemy_structures
+        enemies_can_attack: Units = enemies.filter(lambda unit: unit.can_attack_ground)
+        for r in self.units(UnitTypeId.REAPER):
+
+            # Move to range 15 of closest unit if reaper is below 20 hp and not regenerating
+            enemy_threats_close: Units = enemies_can_attack.filter(
+                lambda unit: unit.distance_to(r) < 15
+            )  # Threats that can attack the reaper
+
+            if r.health_percentage < 2 / 5 and enemy_threats_close:
+                retreat_points: Set[Point2] = self.neighbors8(r.position,
+                                                              distance=2) | self.neighbors8(r.position, distance=4)
+                # Filter points that are pathable
+                retreat_points: Set[Point2] = {x for x in retreat_points if self.in_pathing_grid(x)}
+                if retreat_points:
+                    closest_enemy: Unit = enemy_threats_close.closest_to(r)
+                    retreat_point: Unit = closest_enemy.position.furthest(retreat_points)
+                    r.move(retreat_point)
+                    continue  # Continue for loop, dont execute any of the following
+
+            # Reaper is ready to attack, shoot nearest ground unit
+            enemy_ground_units: Units = enemies.filter(
+                lambda unit: unit.distance_to(r) < 5 and not unit.is_flying
+            )  # Hardcoded attackrange of 5
+            if r.weapon_cooldown == 0 and enemy_ground_units:
+                enemy_ground_units: Units = enemy_ground_units.sorted(lambda x: x.distance_to(r))
+                closest_enemy: Unit = enemy_ground_units[0]
+                r.attack(closest_enemy)
+                continue  # Continue for loop, dont execute any of the following
+
+            # Attack is on cooldown, check if grenade is on cooldown, if not then throw it to furthest enemy in range 5
+            # pylint: disable=W0212
+            reaper_grenade_range: float = (
+                self.game_data.abilities[AbilityId.KD8CHARGE_KD8CHARGE.value]._proto.cast_range
+            )
+            enemy_ground_units_in_grenade_range: Units = enemies_can_attack.filter(
+                lambda unit: not unit.is_structure and not unit.is_flying and unit.type_id not in
+                {UnitTypeId.LARVA, UnitTypeId.EGG} and unit.distance_to(r) < reaper_grenade_range
+            )
+            if enemy_ground_units_in_grenade_range and (r.is_attacking or r.is_moving):
+                # If AbilityId.KD8CHARGE_KD8CHARGE in abilities, we check that to see if the reaper grenade is off cooldown
+                abilities = await self.get_available_abilities(r)
+                enemy_ground_units_in_grenade_range = enemy_ground_units_in_grenade_range.sorted(
+                    lambda x: x.distance_to(r), reverse=True
+                )
+                furthest_enemy: Unit = None
+                for enemy in enemy_ground_units_in_grenade_range:
+                    if await self.can_cast(r, AbilityId.KD8CHARGE_KD8CHARGE, enemy, cached_abilities_of_unit=abilities):
+                        furthest_enemy: Unit = enemy
+                        break
+                if furthest_enemy:
+                    r(AbilityId.KD8CHARGE_KD8CHARGE, furthest_enemy)
+                    continue  # Continue for loop, don't execute any of the following
+
+            # Move to max unit range if enemy is closer than 4
+            enemy_threats_very_close: Units = enemies.filter(
+                lambda unit: unit.can_attack_ground and unit.distance_to(r) < 4.5
+            )  # Hardcoded attackrange minus 0.5
+            # Threats that can attack the reaper
+            if r.weapon_cooldown != 0 and enemy_threats_very_close:
+                retreat_points: Set[Point2] = self.neighbors8(r.position,
+                                                              distance=2) | self.neighbors8(r.position, distance=4)
+                # Filter points that are pathable by a reaper
+                retreat_points: Set[Point2] = {x for x in retreat_points if self.in_pathing_grid(x)}
+                if retreat_points:
+                    closest_enemy: Unit = enemy_threats_very_close.closest_to(r)
+                    retreat_point: Point2 = max(
+                        retreat_points, key=lambda x: x.distance_to(closest_enemy) - x.distance_to(r)
+                    )
+                    r.move(retreat_point)
+                    continue  # Continue for loop, don't execute any of the following
+
+            # Move to nearest enemy ground unit/building because no enemy unit is closer than 5
+            all_enemy_ground_units: Units = self.enemy_units.not_flying
+            if all_enemy_ground_units:
+                closest_enemy: Unit = all_enemy_ground_units.closest_to(r)
+                r.move(closest_enemy)
+                continue  # Continue for loop, don't execute any of the following
+
+            # Move to random enemy start location if no enemy buildings have been seen
+            r.move(random.choice(self.enemy_start_locations))
+
+        # Manage idle scvs, would be taken care by distribute workers aswell
+        if self.townhalls:
+            for w in self.workers.idle:
+                th: Unit = self.townhalls.closest_to(w)
+                mfs: Units = self.mineral_field.closer_than(10, th)
+                if mfs:
+                    mf: Unit = mfs.closest_to(w)
+                    w.gather(mf)
+
+        # Manage orbital energy and drop mules
+        for oc in self.townhalls(UnitTypeId.ORBITALCOMMAND).filter(lambda x: x.energy >= 50):
+            mfs: Units = self.mineral_field.closer_than(10, oc)
+            if mfs:
+                mf: Unit = max(mfs, key=lambda x: x.mineral_contents)
+                oc(AbilityId.CALLDOWNMULE_CALLDOWNMULE, mf)
+            
+                    
+        # scv defend itself            
         probe_targets = (self.enemy_units).closer_than(5, self.start_location)
         for unit in self.units(UnitTypeId.PROBE):
             if(probe_targets.amount > 3):
                 target = probe_targets.closest_to(unit)
                 unit.attack(target)            
+                
+        # Raise depos when enemies are nearby
+        for depo in self.structures(UnitTypeId.SUPPLYDEPOT).ready:
+            for unit in self.enemy_units:
+                if unit.distance_to(depo) < 15:
+                    break
+            else:
+                depo(AbilityId.MORPH_SUPPLYDEPOT_LOWER)
+
+        # Lower depos when no enemies are nearby
+        for depo in self.structures(UnitTypeId.SUPPLYDEPOTLOWERED).ready:
+            for unit in self.enemy_units:
+                if unit.distance_to(depo) < 10:
+                    depo(AbilityId.MORPH_SUPPLYDEPOT_RAISE)
+                    break        
+                
+        # Build wall
+        if self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0:
+            if len(depot_placement_positions) == 0:
+                return
+            # Choose any depot location
+            target_depot_location: Point2 = depot_placement_positions.pop()
+            workers: Units = self.workers.gathering
+            if workers:  # if workers were found
+                worker: Unit = workers.random
+                worker.build(UnitTypeId.SUPPLYDEPOT, target_depot_location)
+
+        # Build barracks
+        if depots.ready and self.can_afford(UnitTypeId.BARRACKS) and self.already_pending(UnitTypeId.BARRACKS) == 0:
+            if self.structures(UnitTypeId.BARRACKS).amount + self.already_pending(UnitTypeId.BARRACKS) > 0:
+                return
+            workers = self.workers.gathering
+            if workers and barracks_placement_position:  # if workers were found
+                worker: Unit = workers.random
+                worker.build(UnitTypeId.BARRACKS, barracks_placement_position)        
 
         action = state_rwd_action['action']
         # await BotAction.take_action(action, iteration) this block might be moved
         '''
         0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
-        1: build stargate (or up to one) (evenly)
-        2: build proxy pylon
-        3: build more gates
-        4: build dark shrine
-        5: build defences eg. photon cannon
-        6: train zealtos
-        7: train voidray (evenly)
-        8: train zealots in warp gate
-        9: train stalkers in warp gate
-        10: train dark templars in warp gate
-        11: send scout (evenly/random/closest to enemy?)
-        12: do upgrades
-        13: chronoboost nexus or cybernetics
-        14: defend attack
-        15: attack dark templars / zealots
-        16: attack stalker units
-        17: attack voidray (known buildings, units, then enemy base, just go in logical order.)
-        18: zealots flee (back to base)
-        19: voidray flee (back to base)
-        20: cannon rush
-        TODO: flee probes when attacked
-        TODO: if enemy being aggresive build oracle 
-        TODO: attack oracle
+    
         '''
 
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
@@ -353,133 +366,60 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         elif action == 1:
             try:
                 if self.current_tactic == 1:
-                    await self.build_advanced_building(UnitTypeId.GATEWAY, UnitTypeId.CYBERNETICSCORE, 15, 100)
-                    await self.build_more_gates()
-                if self.current_tactic == 2:    
-                    await self.build_advanced_building(UnitTypeId.TWILIGHTCOUNCIL, UnitTypeId.DARKSHRINE, 100, 100)
-                    await self.build_more_gates()
-                if self.current_tactic == 3:        
-                    await self.build_advanced_building(UnitTypeId.STARGATE, UnitTypeId.STARGATE, 20, 20, build_cybernetics=True)
-                if self.current_tactic == 3 or self.current_tactic == 4:
-                    await self.build_advanced_building(UnitTypeId.FORGE, UnitTypeId.PHOTONCANNON, 100, 15)
+                    await self.build_more_rax()
             except Exception as e:
-                print("Action 1", e)
+                print("Action 1", e)        
     
-        # 2: build proxy
-        elif action == 2 and (self.current_tactic == 1 or self.current_tactic == 2):
+        # 2: build proxy rax
+        elif action == 2:
             try:
-                await self.build_proxy_pylon(iteration)
+                await self.build_proxy_rax(iteration)
             except Exception as e:
                 print("Action 2", e)
                 
 
-        # 3: train units in base
-        elif action == 3 and self.current_tactic != 1:
+        # 3: train units in rax
+        elif action == 3:
             try:
                 self.train_troop_in_building(
-                    UnitTypeId.GATEWAY, UnitTypeId.ZEALOT)
+                    UnitTypeId.BARRACKS, UnitTypeId.MARRINE)
                 self.train_troop_in_building(
-                    UnitTypeId.STARGATE, UnitTypeId.VOIDRAY)
+                    UnitTypeId.BARRACKS, UnitTypeId.REAPER)
             except Exception as e:
                 print("Action 3", e)
-
-        # 4: train units in warp gate
-        elif action == 4 and self.current_tactic != 4:
+                
+        # 4: build supply depots        
+        elif action == 4:
             try:
-                targets = (self.enemy_units).filter(
-                    lambda unit: unit.can_be_attacked)
-                if self.current_tactic == 1:
-                    self.abilityId = AbilityId.WARPGATETRAIN_STALKER
-                    self.unitTypeId = UnitTypeId.STALKER
-                elif self.current_tactic == 2:
-                    self.abilityId = AbilityId.WARPGATETRAIN_DARKTEMPLAR
-                    self.unitTypeId = UnitTypeId.DARKTEMPLAR
-                elif self.current_tactic == 3:
-                    self.abilityId = AbilityId.WARPGATETRAIN_ZEALOT
-                    self.unitTypeId = UnitTypeId.ZEALOT 
-                         
-                if self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
-                    proxy = self.structures(UnitTypeId.PYLON).closest_to(
-                        self.enemy_start_locations[0])
-                    await self.warp_new_units(self.abilityId, self.unitTypeId, proxy)
-                elif not self.proxy_built and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1 and targets.closer_than(25, self.start_location).exists:
-                    random_nexus_pylon = self.structures(
-                        UnitTypeId.PYLON).closest_to(self.townhalls.random)
-                    await self.warp_new_units(self.abilityId, self.unitTypeId, random_nexus_pylon)
+                 if (
+                    self.supply_left < 5 and self.townhalls and self.supply_used >= 14 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.already_pending(UnitTypeId.SUPPLYDEPOT) < 1):
+                        workers: Units = self.workers.gathering
+                        # If workers were found
+                        if workers:
+                            worker: Unit = workers.furthest_to(workers.center)
+                            location: Point2 = await self.find_placement(UnitTypeId.SUPPLYDEPOT, worker.position, placement_step=3)
+                            # If a placement location was found
+                            if location:
+                                # Order worker to build exactly on that location
+                                worker.build(UnitTypeId.SUPPLYDEPOT, location)      
             except Exception as e:
-                print("Action 4", e)
+                print("Action 4", e)          
 
         # 5: send scout (evenly/random/closest to enemy?)
         elif action == 5:
             try:
                 self.scout(curent_iteration=iteration)
             except Exception as e:
-                print("Action 5", e)
+                print("Action 5", e)      
 
-        # 6: do upgrades,
-        # now it is simple version just do level one upgrades
-        # TODO: add multiple upgrades and calculate costs
-        elif action == 6:
-            try:
-                for forge in self.structures(UnitTypeId.FORGE).ready.idle:
-                    if self.can_afford(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1):
-                        forge.research(UpgradeId.PROTOSSGROUNDWEAPONSLEVEL1)
-                    if self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL1):
-                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL1)
-                    if self.can_afford(UpgradeId.PROTOSSSHIELDSLEVEL1):
-                        forge.research(UpgradeId.PROTOSSSHIELDSLEVEL1)
-                    if self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL2):
-                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL2)
-                    if self.can_afford(UpgradeId.PROTOSSGROUNDARMORSLEVEL2):
-                        forge.research(UpgradeId.PROTOSSGROUNDARMORSLEVEL2)
-                    if self.can_afford(UpgradeId.PROTOSSSHIELDSLEVEL2):
-                        forge.research(UpgradeId.PROTOSSSHIELDSLEVEL2)
-
-                if (self.structures(UnitTypeId.CYBERNETICSCORE).ready and self.can_afford(AbilityId.RESEARCH_WARPGATE) and self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 0):
-                    ccore = self.structures(
-                        UnitTypeId.CYBERNETICSCORE).ready.first
-                    ccore.research(UpgradeId.WARPGATERESEARCH)
-                    
-                if (self.structures(UnitTypeId.TWILIGHTCOUNCIL).ready and self.can_afford(AbilityId.RESEARCH_CHARGE)):
-                    council = self.structures(
-                        UnitTypeId.TWILIGHTCOUNCIL).ready.first
-                    council.research(AbilityId.RESEARCH_CHARGE)    
-
-                # Morph to warp gate when research is complete
-                for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
-                    if self.already_pending_upgrade(UpgradeId.WARPGATERESEARCH) == 1:
-                        gateway(AbilityId.MORPH_WARPGATE)
-
-            except Exception as e:
-                print("Action 6", e)
-
-        # 7: chronoboost nexus or cybernetics core
-        elif action == 7:
-            try:
-                for nexus in self.structures(UnitTypeId.NEXUS):
-                    if not self.structures(UnitTypeId.CYBERNETICSCORE).ready:
-                        if not nexus.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not nexus.is_idle:
-                            if nexus.energy >= 50:
-                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, nexus)
-                    else:
-                        ccore = self.structures(
-                            UnitTypeId.CYBERNETICSCORE).ready.first
-                        if not ccore.has_buff(BuffId.CHRONOBOOSTENERGYCOST) and not ccore.is_idle:
-                            if nexus.energy >= 50:
-                                nexus(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, ccore)
-            except Exception as e:
-                print("Action 7", e)
-
-        # 8: defend attack try to use zealots
+        # 6: defend attack try to use marine
         # TODO: more defensive tactics
-        elif action == 8:
+        elif action == 6:
             try:
                 # just attack it didn't work yet
                 if self.enemy_units.exists:
                     targets = (self.enemy_units).filter(lambda unit: unit.can_be_attacked)
-                    #for nexus in self.structures(UnitTypeId.NEXUS):
-                    #    self.is_attack = targets.closer_than(10, nexus)
-                    for unit in self.units(UnitTypeId.ZEALOT):
+                    for unit in self.units(UnitTypeId.MARINE):
                         if(unit.is_idle):
                             target = targets.closest_to(unit)
                             if(target != None):
@@ -488,130 +428,43 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
                                 self.do_random_attack(unit)
                
             except Exception as e:
-                print("Action 8", e)
+                print("Action 6", e)
 
-        # 9: attack base
-        elif action == 9:
+        # 7: attack base
+        elif action == 7:
             try:
-                for templar in self.units(UnitTypeId.DARKTEMPLAR).ready.idle:
+                for reaper in self.units(UnitTypeId.REAPER).ready.idle:
                     targets = (self.enemy_units | self.enemy_structures).filter(
                         lambda unit: unit.can_be_attacked)
                     if targets:
-                        target = targets.closest_to(templar)
-                        templar.attack(target)
+                        target = targets.closest_to(reaper)
+                        reaper.attack(target)
                     else:
-                        self.do_random_attack(templar)     
+                        self.do_random_attack(reaper)     
                         
-                # attack stalker units, Make stalkers attack either closest enemy unit or enemy spawn location        
-                if self.units(UnitTypeId.STALKER).amount > 8:
+                # attack marine units, Make marrine attack either closest enemy unit or enemy spawn location        
+                if self.units(UnitTypeId.MARINE).amount > 5:
                     self.siege = (self.enemy_structures).closer_than(25, self.enemy_start_locations[0]).exists
-                    for stalker in self.units(UnitTypeId.STALKER).ready.idle:
+                    for marine in self.units(UnitTypeId.MARINE).ready.idle:
                         targets = (self.enemy_units | self.enemy_structures).filter(
                             lambda unit: unit.can_be_attacked)
                         if targets:
-                            target = targets.closest_to(stalker)
-                            stalker.attack(target)
+                            target = targets.closest_to(marine)
+                            marine.attack(target)
                         else:
-                            self.do_random_attack(stalker)  
-                            
-                # attack voidray (known buildings, units, then enemy base, just go in logical order.)            
-                targets = (self.enemy_units).filter(
-                    lambda unit: unit.can_be_attacked)
-                if targets.closer_than(20, self.start_location):
-                    for voidray in self.units(UnitTypeId.VOIDRAY):
-                        target = targets.closest_to(voidray)
-                        voidray.attack(target)
-                # If we have at least 5 void rays, attack closes enemy unit/building, or if none is visible: attack move towards enemy spawn
-                elif self.units(UnitTypeId.VOIDRAY).amount > 5:
-                    for voidray in self.units(UnitTypeId.VOIDRAY):
-                        # Activate prismatic ability if the void ray just attacked
-                        if voidray.weapon_cooldown > 0:
-                            voidray(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
-                        # Choose target and attack, filter out invisible targets
-                        targets = (self.enemy_units | self.enemy_structures)
-                        if targets:
-                            target = targets.closest_to(voidray)
-                            voidray.attack(target)
-                        else:
-                            self.do_random_attack(voidray)                                      
+                            self.do_random_attack(marine)                                   
 
             except Exception as e:
                 print("Action 9", e)
 
-        # 10: unit flee
+        # 8: unit flee
         # TODO: think about more complex algorythm for flee for eg. count chances to being attack
-        elif action == 10:
+        elif action == 8:
             try:
-                self.flee_to_base(UnitTypeId.VOIDRAY)
-                if self.units(UnitTypeId.ZEALOT).amount < 12:
-                    self.flee_to_ramp(UnitTypeId.ZEALOT)
+                if self.units(UnitTypeId.MARINE).amount < 4:
+                    self.flee_to_ramp(UnitTypeId.MARINE)
             except Exception as e:
-                print("Action 10", e)
-
-        # 11: cannon rush
-        # TODO: maybe do more complex tactics for cannon rush
-        elif action == 11 and self.current_tactic == 4:
-            try:
-                self.last_proxy
-            except:
-                self.last_proxy = 0
-
-            try:
-                # await self.chat_send("(probe)(pylon)(cannon)(cannon)(gg)")
-                if not self.townhalls:
-                    # Attack with all workers if we don't have any nexuses left, attack-move on enemy spawn (doesn't work on 4 player map) so that probes auto attack on the way
-                    for worker in self.workers:
-                        worker.attack(self.enemy_start_locations[0])
-                    return
-                else:
-                    nexus = self.townhalls.random
-
-                location = self.enemy_structures.closer_than(
-                    30, self.enemy_start_locations[0]).exists
-
-                # Make probes until we have 16 total
-                if self.supply_workers < 16 and nexus.is_idle:
-                    if self.can_afford(UnitTypeId.PROBE):
-                        nexus.train(UnitTypeId.PROBE)
-
-                # If we have no pylon, build one near starting nexus
-                elif not self.structures(UnitTypeId.PYLON) and self.already_pending(UnitTypeId.PYLON) == 0:
-                    if self.can_afford(UnitTypeId.PYLON):
-                        await self.build(UnitTypeId.PYLON, near=nexus)
-
-                # If we have no forge, build one near the pylon that is closest to our starting nexus
-                elif not self.structures(UnitTypeId.FORGE):
-                    pylon_ready = self.structures(UnitTypeId.PYLON).ready
-                    if pylon_ready:
-                        if self.can_afford(UnitTypeId.FORGE):
-                            await self.build(UnitTypeId.FORGE, near=pylon_ready.closest_to(nexus))
-
-                # If we have less than 2 pylons, build one at the enemy base
-                elif self.structures(UnitTypeId.PYLON).amount < 2 and (iteration - self.last_proxy) > 100:
-                    if self.can_afford(UnitTypeId.PYLON):
-                        pos = self.enemy_start_locations[0].towards(
-                            self.game_info.map_center, random.randrange(25, 35))
-                        await self.build(UnitTypeId.PYLON, near=pos)
-
-                # If we have no cannons but at least 2 completed pylons, automatically find a placement location and build them near enemy start location
-                elif not self.structures(UnitTypeId.PHOTONCANNON).closer_than(35, self.enemy_start_locations[0]):
-                    if self.structures(UnitTypeId.PYLON).ready.amount >= 2 and self.can_afford(UnitTypeId.PHOTONCANNON):
-                        pylon = self.structures(UnitTypeId.PYLON).closer_than(
-                            35, self.enemy_start_locations[0]).random
-                        await self.build(UnitTypeId.PHOTONCANNON, near=pylon)
-
-                # Decide if we should make pylon or cannons, then build them at random location near enemy spawn
-                elif self.can_afford(UnitTypeId.PYLON) and self.can_afford(UnitTypeId.PHOTONCANNON) and location:
-                    # Ensure "fair" decision
-                    for _ in range(20):
-                        pos = self.enemy_start_locations[0].random_on_distance(
-                            random.randrange(10, 25))
-                        building = UnitTypeId.PHOTONCANNON if self.state.psionic_matrix.covers(
-                            pos) else UnitTypeId.PYLON
-                        await self.build(building, near=pos)
-
-            except Exception as e:
-                print("Action 11", e)
+                print("Action 8", e)
 
         map = np.zeros(
             (self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
@@ -726,50 +579,31 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         try:
             attack_count = 0
-            # iterate through our void rays:
-            for voidray in self.units(UnitTypeId.VOIDRAY):
-                # if voidray is attacking and is in range of enemy unit:
-                if voidray.is_attacking and voidray.target_in_range:
-                    if self.enemy_units.closer_than(8, voidray) or self.enemy_structures.closer_than(8, voidray):
+
+            # iterate through our reapers:
+            for reaper in self.units(UnitTypeId.REAPER):
+                if reaper.is_attacking and reaper.target_in_range:
+                    if self.enemy_units.closer_than(8, reaper) or self.enemy_structures.closer_than(8, reaper):
                         # reward += 0.005 # original was 0.005, decent results, but let's 3x it.
                         reward += 0.015
                         attack_count += 1
 
-            # iterate through our photon cannon:
-            for cannon in self.structures(UnitTypeId.PHOTONCANNON):
-                # if voidray is attacking and is in range of enemy unit:
-                if cannon.is_attacking and cannon.target_in_range:
-                    if self.enemy_units.closer_than(8, cannon) or self.enemy_structures.closer_than(8, cannon):
+            # iterate through our marines:
+            for marine in self.units(UnitTypeId.MARINE):
+                if marine.is_attacking and marine.target_in_range:
+                    if self.enemy_units.closer_than(8, marine) or self.enemy_structures.closer_than(8, marine):
                         # reward += 0.005 # original was 0.005, decent results, but let's 3x it.
                         reward += 0.01
                         attack_count += 1
 
-            # iterate through our stalkers:
-            for stalker in self.units(UnitTypeId.STALKER):
+             # iterate through our dark tanks:
+            #for tank in self.units(UnitTypeId.SIEGETANK):
                 # if voidray is attacking and is in range of enemy unit:
-                if stalker.is_attacking and stalker.target_in_range:
-                    if self.enemy_units.closer_than(8, stalker) or self.enemy_structures.closer_than(8, stalker):
+             #   if tank.is_attacking and tank.target_in_range:
+              #      if self.enemy_units.closer_than(8, tank) or self.enemy_structures.closer_than(8, tank):
                         # reward += 0.005 # original was 0.005, decent results, but let's 3x it.
-                        reward += 0.015
-                        attack_count += 1
-
-            # iterate through our zealots:
-            for zealot in self.units(UnitTypeId.ZEALOT):
-                # if voidray is attacking and is in range of enemy unit:
-                if zealot.is_attacking and zealot.target_in_range:
-                    if self.enemy_units.closer_than(8, zealot) or self.enemy_structures.closer_than(8, zealot):
-                        # reward += 0.005 # original was 0.005, decent results, but let's 3x it.
-                        reward += 0.01
-                        attack_count += 1
-
-            # iterate through our dark templars:
-            for templar in self.units(UnitTypeId.DARKTEMPLAR):
-                # if voidray is attacking and is in range of enemy unit:
-                if templar.is_attacking and templar.target_in_range:
-                    if self.enemy_units.closer_than(8, templar) or self.enemy_structures.closer_than(8, templar):
-                        # reward += 0.005 # original was 0.005, decent results, but let's 3x it.
-                        reward += 0.015
-                        attack_count += 1
+               #         reward += 0.015
+                #        attack_count += 1 
 
         except Exception as e:
             print("reward", e)
@@ -777,7 +611,7 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         if iteration % 100 == 0:
             print(
-                f"Iter: {iteration}. RWD: {reward}. Z: {self.units(UnitTypeId.ZEALOT).amount} S: {self.units(UnitTypeId.STALKER).amount} DT: {self.units(UnitTypeId.DARKTEMPLAR).amount} VR: {self.units(UnitTypeId.VOIDRAY).amount}")
+                f"Iter: {iteration}. RWD: {reward}. M: {self.units(UnitTypeId.MARINE).amount} T: {self.units(UnitTypeId.SIEGETANK).amount} R: {self.units(UnitTypeId.REAPER).amount}")
 
         save_map = np.resize(map, (160, 160, 3))
 
