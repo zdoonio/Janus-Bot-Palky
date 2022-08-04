@@ -94,13 +94,6 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
     async def expand(self) -> None:
         found_something = False
-        if self.supply_left < 4:
-            # build pylons.
-            if self.already_pending(UnitTypeId.SCV) == 0:
-                if self.can_afford(UnitTypeId.SCV):
-                    await self.build(UnitTypeId.SCV, near=random.choice(self.townhalls))
-                    found_something = True
-
         if not found_something:
 
             for cc in self.townhalls:
@@ -140,9 +133,12 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
 
         point = self.game_info.map_center.towards(
             self.enemy_start_locations[0], 20)
+        
+        workers = self.workers.gathering
 
         if (self.structures(UnitTypeId.SUPPLYDEPOT).amount >= 1 and not self.proxy_built and self.can_afford(UnitTypeId.BARRACKS)) and (curent_iteration - self.last_sent) > 200:
-            await self.build(UnitTypeId.BARRACKS, near=point)
+            worker: Unit = workers.random
+            worker.build(UnitTypeId.BARRACKS, position=point)
             await self.chat_send("building proxy rax")
             self.proxy_built = True
 
@@ -150,10 +146,29 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             self.proxy_built = False
 
     async def build_more_rax(self):
-        if self.structures(UnitTypeId.SUPPLYDEPOT).exists:
-            # Build up to 2 rax
-            if (self.can_afford(UnitTypeId.BARRACKS) and self.structures(UnitTypeId.BARRACKS).amount + self.structures(UnitTypeId.BARRACKS).amount < 2):
-                await self.build(UnitTypeId.BARRACKS, near=self.start_location)
+        # Build up to 4 barracks if we can afford them
+        # Check if we have a supply depot (tech requirement) before trying to make barracks
+        barracks_tech_requirement: float = self.tech_requirement_progress(UnitTypeId.BARRACKS)
+        if (
+            barracks_tech_requirement == 1
+            # self.structures.of_type(
+            #     [UnitTypeId.SUPPLYDEPOT, UnitTypeId.SUPPLYDEPOTLOWERED, UnitTypeId.SUPPLYDEPOTDROP]
+            # ).ready
+            and self.structures(UnitTypeId.BARRACKS).ready.amount + self.already_pending(UnitTypeId.BARRACKS) < 4 and
+            self.can_afford(UnitTypeId.BARRACKS)
+        ):
+            workers: Units = self.workers.gathering
+            if (
+                workers and self.townhalls
+            ):  # need to check if townhalls.amount > 0 because placement is based on townhall location
+                worker: Unit = workers.furthest_to(workers.center)
+                # I chose placement_step 4 here so there will be gaps between barracks hopefully
+                location: Point2 = await self.find_placement(
+                    UnitTypeId.BARRACKS, self.townhalls.random.position, placement_step=4
+                )
+                if location:
+                    worker.build(UnitTypeId.BARRACKS, location)
+
 
     # on_step is a method that is called every step of the game.
     async def on_step(self, iteration: int):
@@ -165,10 +180,6 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
             elif self.current_tactic == 2:
                 await self.chat_send("proxy barracks")   
             await self.chat_send("(glhf)")
-            
-        # stops cannon rush to not use them forever    
-        if iteration % 10000 == 0 and self.current_tactic == 4:
-            self.current_tactic = self.current_tactic = random.randrange(1, 3)
 
         if not any(self.townhalls):
             # surrender
@@ -366,7 +377,6 @@ class JanusBot(BotAI):  # inhereits from BotAI (part of BurnySC2)
         0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
     
         '''
-
         # 0: expand (ie: move to next spot, or build to 16 (minerals)+3 assemblers+3)
         if action == 0:
             try:

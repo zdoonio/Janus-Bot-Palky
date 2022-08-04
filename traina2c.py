@@ -13,14 +13,14 @@ models_dir = f"data/models/{model_name}/"
 logdir = f"data/logs/{model_name}/"
 
 
-conf_dict = {"Model": "v0.3.2",
+conf_dict = {"Model": "v0.4.0_palky",
              "Machine": "Main",
              "policy":"MlpPolicy",
              "model_save_name": model_name}
 
 
 run = wandb.init(
-    project=f'JanusBotv0.3',
+    project=f'JanusBotPalkyv0.4',
     entity="zdoonio",
     config=conf_dict,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
@@ -44,4 +44,4 @@ while True:
 	print("On iteration: ", iters)
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
-	model.save(f"{models_dir}/v0_3_2.zip")
+	model.save(f"{models_dir}/v0_4_0_palky.zip")
